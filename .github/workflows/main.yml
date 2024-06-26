@@ -26,5 +26,5 @@ jobs:
     - name: Run the default task
       run: bundle exec rake
       env:
-        OR_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        OR_ACCESS_TOKEN: ${{ secrets.OR_ACCESS_TOKEN }}
         OAI_ACCESS_TOKEN: ${{ secrets.OAI_ACCESS_TOKEN }}
