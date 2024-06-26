@@ -1,5 +1,6 @@
 AllCops:
-  TargetRubyVersion: 2.6
+  SuggestExtensions: false
+  TargetRubyVersion: 3.2.1
 
 Style/StringLiterals:
   Enabled: true
@@ -11,3 +12,21 @@ Style/StringLiteralsInInterpolation:
 
 Layout/LineLength:
   Max: 120
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: false
+
+Metrics/ModuleLength:
+  Enabled: false
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false

@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         ruby:
-          - '3.2.1'
+          - '3.2.2'
 
     steps:
     - uses: actions/checkout@v3
@@ -25,3 +25,6 @@ jobs:
         bundler-cache: true
     - name: Run the default task
       run: bundle exec rake
+      env:
+        OR_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        OAI_ACCESS_TOKEN: ${{ secrets.OAI_ACCESS_TOKEN }}
