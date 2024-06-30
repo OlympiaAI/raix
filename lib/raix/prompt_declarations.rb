@@ -17,10 +17,11 @@ module Raix
       # @param text [Proc] A lambda that generates the prompt text. (Required)
       # @param success [Proc] The block of code to execute when the prompt is answered.
       # @param parameters [Hash] Additional parameters for the completion API call
-      def prompt(text:, system: nil, success: nil, params: {})
+      # @param stream [Boolean] Whether to stream the response.
+      def prompt(text:, system: nil, success: nil, params: {}, stream: false)
         name = Digest::SHA256.hexdigest(text.inspect)[0..7]
         prompts << begin
-          OpenStruct.new({ name:, system:, text:, success:, params: })
+          OpenStruct.new({ name:, system:, text:, success:, params:, stream: })
         end
 
         define_method(name) do |response|
@@ -80,6 +81,9 @@ module Raix
         transcript << { user: instance_exec(&@current_prompt.text) } # text is required
 
         params = @current_prompt.params.merge(params)
+
+        # set the stream if necessary
+        self.stream = instance_exec(&current_prompt.stream) if current_prompt.stream.present?
 
         super(params:, raw:).then do |response|
           transcript << { assistant: response }
