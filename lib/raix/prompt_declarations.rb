@@ -83,7 +83,7 @@ module Raix
         params = @current_prompt.params.merge(params)
 
         # set the stream if necessary
-        self.stream = instance_exec(&current_prompt.stream) if current_prompt.stream.present?
+        self.stream = instance_exec(&@current_prompt.stream) if @current_prompt.stream.present?
 
         super(params:, raw:).then do |response|
           transcript << { assistant: response }
