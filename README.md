@@ -216,6 +216,18 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
     $ gem install raix
 
+If you are using the default OpenRouter API, Raix expects `Raix.configuration.openrouter_client` to initialized with the OpenRouter API client instance.
+
+You can add an initializer to your application's `config/initializers` directory:
+
+```ruby
+  # config/initializers/raix.rb
+  Raix.configure do |config|
+    config.openrouter_client = OpenRouter::Client.new
+  end
+```
+
+You will also need to configure the OpenRouter API access token as per the instructions here: https://github.com/OlympiaAI/open_router?tab=readme-ov-file#quickstart
 
 ## Development
 
