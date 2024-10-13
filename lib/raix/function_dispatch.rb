@@ -35,7 +35,7 @@ module Raix
       # argument will be executed in the instance context of the class that includes this module.
       #
       # Example:
-      #   function :google_search, description: "Search Google for something", query: { type: "string" } do |arguments|
+      #   function :google_search, "Search Google for something", query: { type: "string" } do |arguments|
       #     GoogleSearch.new(arguments[:query]).search
       #   end
       #
