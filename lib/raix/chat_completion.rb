@@ -2,6 +2,7 @@
 
 require "active_support/concern"
 require "active_support/core_ext/object/blank"
+require "raix/message_adapters/base"
 require "open_router"
 require "openai"
 
@@ -17,9 +18,9 @@ module Raix
   module ChatCompletion
     extend ActiveSupport::Concern
 
-    attr_accessor :frequency_penalty, :logit_bias, :logprobs, :loop, :min_p, :model, :presence_penalty,
-                  :repetition_penalty, :response_format, :stream, :temperature, :max_tokens, :seed, :stop, :top_a,
-                  :top_k, :top_logprobs, :top_p, :tools, :tool_choice, :provider
+    attr_accessor :cache_at, :frequency_penalty, :logit_bias, :logprobs, :loop, :min_p, :model, :presence_penalty,
+                  :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
+                  :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :tool_choice, :provider
 
     # This method performs chat completion based on the provided transcript and parameters.
     #
@@ -30,16 +31,12 @@ module Raix
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @return [String|Hash] The completed chat response.
     def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false)
-      messages = transcript.flatten.compact.map { |msg| transform_message_format(msg) }
-      raise "Can't complete an empty transcript" if messages.blank?
-
-      # used by FunctionDispatch
-      self.loop = loop
-
       # set params to default values if not provided
+      params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
       params[:logit_bias] ||= logit_bias.presence
       params[:logprobs] ||= logprobs.presence
+      params[:max_completion_tokens] ||= max_completion_tokens.presence || Raix.configuration.max_completion_tokens
       params[:max_tokens] ||= max_tokens.presence || Raix.configuration.max_tokens
       params[:min_p] ||= min_p.presence
       params[:presence_penalty] ||= presence_penalty.presence
@@ -57,23 +54,29 @@ module Raix
       params[:top_p] ||= top_p.presence
 
       if json
-        params[:provider] ||= {}
-        params[:provider][:require_parameters] = true
+        unless openai
+          params[:provider] ||= {}
+          params[:provider][:require_parameters] = true
+        end
         params[:response_format] ||= {}
         params[:response_format][:type] = "json_object"
       end
 
+      # used by FunctionDispatch
+      self.loop = loop
+
       # set the model to the default if not provided
       self.model ||= Raix.configuration.model
 
+      adapter = MessageAdapters::Base.new(self)
+      messages = transcript.flatten.compact.map { |msg| adapter.transform(msg) }
+      raise "Can't complete an empty transcript" if messages.blank?
+
       begin
         response = if openai
-                     openai_request(params:, model: openai,
-                                    messages:)
+                     openai_request(params:, model: openai, messages:)
                    else
-                     openrouter_request(
-                       params:, model:, messages:
-                     )
+                     openrouter_request(params:, model:, messages:)
                    end
         retry_count = 0
         content = nil
@@ -115,8 +118,8 @@ module Raix
           raise e # just fail if we can't get content after 3 attempts
         end
 
-        # attempt to fix the JSON
-        JsonFixer.new.call(content, e.message)
+        puts "Bad JSON received!!!!!!: #{content}"
+        raise e
       rescue Faraday::BadRequestError => e
         # make sure we see the actual error message on console or Honeybadger
         puts "Chat completion failed!!!!!!!!!!!!!!!!: #{e.response[:body]}"
@@ -132,6 +135,9 @@ module Raix
     # { user: "Hey what time is it?" },
     # { assistant: "Sorry, pumpkins do not wear watches" }
     #
+    # to add a function call use the following format:
+    # { function: { name: 'fancy_pants_function', arguments: { param: 'value' } } }
+    #
     # to add a function result use the following format:
     # { function: result, name: 'fancy_pants_function' }
     #
@@ -143,11 +149,21 @@ module Raix
     private
 
     def openai_request(params:, model:, messages:)
+      # deprecated in favor of max_completion_tokens
+      params.delete(:max_tokens)
+
       params[:stream] ||= stream.presence
+      params[:stream_options] = { include_usage: true } if params[:stream]
+
+      params.delete(:temperature) if model == "o1-preview"
+
       Raix.configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
     end
 
     def openrouter_request(params:, model:, messages:)
+      # max_completion_tokens is not supported by OpenRouter
+      params.delete(:max_completion_tokens)
+
       retry_count = 0
 
       begin
@@ -161,18 +177,6 @@ module Raix
         end
 
         raise e
-      end
-    end
-
-    def transform_message_format(message)
-      return message if message[:role].present?
-
-      if message[:function].present?
-        { role: "assistant", name: message.dig(:function, :name), content: message.dig(:function, :arguments).to_json }
-      elsif message[:result].present?
-        { role: "function", name: message[:name], content: message[:result] }
-      else
-        { role: message.first.first, content: message.first.last }
       end
     end
   end

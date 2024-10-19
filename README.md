@@ -42,6 +42,30 @@ transcript << { role: "user", content: "What is the meaning of life?" }
 
 One of the advantages of OpenRouter and the reason that it is used by default by this library is that it handles mapping message formats from the OpenAI standard to whatever other model you're wanting to use (Anthropic, Cohere, etc.)
 
+### Prompt Caching
+
+Raix supports [Anthropic-style prompt caching](https://openrouter.ai/docs/prompt-caching#anthropic-claude) when using Anthropic's Claud family of models. You can specify a `cache_at` parameter when doing a chat completion. If the character count for the content of a particular message is longer than the cache_at parameter, it will be sent to Anthropic as a multipart message with a cache control "breakpoint" set to "ephemeral".
+
+Note that there is a limit of four breakpoints, and the cache will expire within five minutes. Therefore, it is recommended to reserve the cache breakpoints for large bodies of text, such as character cards, CSV data, RAG data, book chapters, etc. Raix does not enforce a limit on the number of breakpoints, which means that you might get an error if you try to cache too many messages.
+
+```ruby
+>> my_class.chat_completion(params: { cache_at: 1000 })
+=> {
+  "messages": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "type": "text",
+          "text": "HUGE TEXT BODY LONGER THAN 1000 CHARACTERS",
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      ]
+    },
+```
+
 ### Use of Tools/Functions
 
 The second (optional) module that you can add to your Ruby classes after `ChatCompletion` is `FunctionDispatch`. It lets you declare and implement functions to be called at the AI's discretion as part of a chat completion "loop" in a declarative, Rails-like "DSL" fashion.
