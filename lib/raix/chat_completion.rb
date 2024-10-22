@@ -2,9 +2,10 @@
 
 require "active_support/concern"
 require "active_support/core_ext/object/blank"
-require "raix/message_adapters/base"
 require "open_router"
 require "openai"
+
+require_relative "message_adapters/base"
 
 module Raix
   # The `ChatCompletion`` module is a Rails concern that provides a way to interact
