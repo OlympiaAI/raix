@@ -20,4 +20,24 @@ RSpec.describe MeaningOfLife do
   it "does a completion with OpenRouter" do
     expect(subject.chat_completion).to include("meaning of life is")
   end
+
+  context "with predicted outputs" do
+    let(:completion) { subject.chat_completion(openai: "gpt-4o", params: { prediction: }) }
+    let(:prediction) do
+      "THE MEANING OF LIFE CAN VARY GREATLY FROM PERSON TO PERSON, OFTEN INVOLVING THE PURSUIT OF HAPPINESS, CARE OF OTHERS, AND PERSONAL GROWTH!."
+    end
+    let(:response) { Thread.current[:chat_completion_response] }
+
+    before do
+      subject.transcript.clear
+      subject.transcript << { system: "Answer the user question in ALL CAPS." }
+      subject.transcript << { user: "WHAT IS THE MEANING OF LIFE?" }
+    end
+
+    it "does a completion with OpenAI" do
+      expect(completion).to start_with("THE MEANING OF LIFE")
+      expect(response.dig("usage", "completion_tokens_details", "accepted_prediction_tokens")).to be > 0
+      expect(response.dig("usage", "completion_tokens_details", "rejected_prediction_tokens")).to be > 0
+    end
+  end
 end

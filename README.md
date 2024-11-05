@@ -42,6 +42,14 @@ transcript << { role: "user", content: "What is the meaning of life?" }
 
 One of the advantages of OpenRouter and the reason that it is used by default by this library is that it handles mapping message formats from the OpenAI standard to whatever other model you're wanting to use (Anthropic, Cohere, etc.)
 
+### Predicted Outputs
+
+Raix supports [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs) with the `prediction` parameter for OpenAI.
+
+```ruby
+>> ai.chat_completion(openai: "gpt-4o", params: { prediction: })
+```
+
 ### Prompt Caching
 
 Raix supports [Anthropic-style prompt caching](https://openrouter.ai/docs/prompt-caching#anthropic-claude) when using Anthropic's Claud family of models. You can specify a `cache_at` parameter when doing a chat completion. If the character count for the content of a particular message is longer than the cache_at parameter, it will be sent to Anthropic as a multipart message with a cache control "breakpoint" set to "ephemeral".

@@ -15,3 +15,6 @@
 ## [0.4.0] - 2024-10-18
 - adds support for Anthropic-style prompt caching
 - defaults to `max_completion_tokens` when using OpenAI directly
+
+## [0.4.2] - 2024-11-05
+- adds support for [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs) with the `prediction` option for OpenAI

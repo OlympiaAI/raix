@@ -20,7 +20,7 @@ module Raix
     extend ActiveSupport::Concern
 
     attr_accessor :cache_at, :frequency_penalty, :logit_bias, :logprobs, :loop, :min_p, :model, :presence_penalty,
-                  :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
+                  :prediction, :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
                   :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :tool_choice, :provider
 
     # This method performs chat completion based on the provided transcript and parameters.
@@ -40,6 +40,7 @@ module Raix
       params[:max_completion_tokens] ||= max_completion_tokens.presence || Raix.configuration.max_completion_tokens
       params[:max_tokens] ||= max_tokens.presence || Raix.configuration.max_tokens
       params[:min_p] ||= min_p.presence
+      params[:prediction] = { type: "content", content: params[:prediction] || prediction } if params[:prediction] || prediction.present?
       params[:presence_penalty] ||= presence_penalty.presence
       params[:provider] ||= provider.presence
       params[:repetition_penalty] ||= repetition_penalty.presence
@@ -150,8 +151,12 @@ module Raix
     private
 
     def openai_request(params:, model:, messages:)
-      # deprecated in favor of max_completion_tokens
-      params.delete(:max_tokens)
+      if params[:prediction]
+        params.delete(:max_completion_tokens)
+      else
+        params[:max_completion_tokens] ||= params[:max_tokens]
+        params.delete(:max_tokens)
+      end
 
       params[:stream] ||= stream.presence
       params[:stream_options] = { include_usage: true } if params[:stream]
