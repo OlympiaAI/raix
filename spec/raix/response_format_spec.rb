@@ -27,7 +27,7 @@ RSpec.describe Raix::ResponseFormat do
 
   let(:rf) { described_class.new("observations", input) }
 
-  xit "matches the expected schema" do
+  it "matches the expected schema" do
     json = JSON.pretty_generate({
                                   "type": "json_schema",
                                   "json_schema": {

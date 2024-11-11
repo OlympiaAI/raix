@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/object/deep_dup"
+require "active_support/core_ext/string/filters"
 
 module Raix
   # Handles the formatting of responses for AI interactions.

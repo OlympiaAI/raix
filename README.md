@@ -333,6 +333,97 @@ question.ask("Any question")
 # => RuntimeError: Please define a yes and/or no block
 ```
 
+## Response Format (Experimental)
+
+The `ResponseFormat` class provides a way to declare a JSON schema for the response format of an AI chat completion. It's particularly useful when you need structured responses from AI models, ensuring the output conforms to your application's requirements.
+
+### Features
+
+- Converts Ruby hashes and arrays into JSON schema format
+- Supports nested structures and arrays
+- Enforces strict validation with `additionalProperties: false`
+- Automatically marks all top-level properties as required
+- Handles both simple type definitions and complex nested schemas
+
+### Basic Usage
+
+```ruby
+# Simple schema with basic types
+format = Raix::ResponseFormat.new("PersonInfo", {
+  name: { type: "string" },
+  age: { type: "integer" }
+})
+
+# Use in chat completion
+my_ai.chat_completion(response_format: format)
+```
+
+### Complex Structures
+
+```ruby
+# Nested structure with arrays
+format = Raix::ResponseFormat.new("CompanyInfo", {
+  company: {
+    name: { type: "string" },
+    employees: [
+      {
+        name: { type: "string" },
+        role: { type: "string" },
+        skills: ["string"]
+      }
+    ],
+    locations: ["string"]
+  }
+})
+```
+
+### Generated Schema
+
+The ResponseFormat class generates a schema that follows this structure:
+
+```json
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "SchemaName",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "property1": { "type": "string" },
+        "property2": { "type": "integer" }
+      },
+      "required": ["property1", "property2"],
+      "additionalProperties": false
+    },
+    "strict": true
+  }
+}
+```
+
+### Using with Chat Completion
+
+When used with chat completion, the AI model will format its response according to your schema:
+
+```ruby
+class StructuredResponse
+  include Raix::ChatCompletion
+
+  def analyze_person(name)
+    format = Raix::ResponseFormat.new("PersonAnalysis", {
+      full_name: { type: "string" },
+      age_estimate: { type: "integer" },
+      personality_traits: ["string"]
+    })
+
+    transcript << { user: "Analyze the person named #{name}" }
+    chat_completion(response_format: format)
+  end
+end
+
+response = StructuredResponse.new.analyze_person("Alice")
+# Returns a hash matching the defined schema
+```
+
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:
