@@ -24,3 +24,7 @@
 
 ## [0.4.4] - 2024-11-11
 - adds support for multiple tool calls in a single response
+
+## [0.4.5] - 2024-11-11
+- adds support for `ResponseFormat`
+- added some missing requires to support String#squish
