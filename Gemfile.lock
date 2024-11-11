@@ -4,7 +4,7 @@ PATH
     raix (0.4.3)
       activesupport (>= 6.0)
       open_router (~> 0.2)
-      ruby-openai
+      ruby-openai (~> 7.0)
 
 GEM
   remote: https://rubygems.org/
