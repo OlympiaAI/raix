@@ -21,3 +21,6 @@
 
 ## [0.4.3] - 2024-11-11
 - adds support for `Predicate` module
+
+## [0.4.4] - 2024-11-11
+- adds support for multiple tool calls in a single response

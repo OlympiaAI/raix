@@ -101,6 +101,30 @@ RSpec.describe WhatIsTheWeather do
 end
 ```
 
+#### Multiple Tool Calls
+
+Some AI models (like GPT-4) can make multiple tool calls in a single response. When this happens, Raix will automatically handle all the function calls sequentially and return an array of their results. Here's an example:
+
+```ruby
+class MultipleToolExample
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :first_tool do |arguments|
+    "Result from first tool"
+  end
+
+  function :second_tool do |arguments|
+    "Result from second tool"
+  end
+end
+
+example = MultipleToolExample.new
+example.transcript << { user: "Please use both tools" }
+results = example.chat_completion(openai: "gpt-4o")
+# => ["Result from first tool", "Result from second tool"]
+```
+
 #### Manually Stopping a Loop
 
 To loop AI components that don't interact with end users, at least one function block should invoke `stop_looping!` whenever you're ready to stop processing.
