@@ -22,3 +22,8 @@ group :development do
   gem "sorbet"
   gem "tapioca", require: false
 end
+
+group :test do
+  gem "vcr"
+  gem "webmock"
+end

@@ -238,6 +238,77 @@ Notably, Olympia does not use the `FunctionDispatch` module in its primary conve
 
 Streaming of the AI's response to the end user is handled by the `ReplyStream` class, passed to the final prompt declaration as its `stream` parameter. [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai) devotes a whole chapter to describing how to write your own `ReplyStream` class.
 
+## Predicate Module
+
+The `Raix::Predicate` module provides a simple way to handle yes/no/maybe questions using AI chat completion. It allows you to define blocks that handle different types of responses with their explanations. It is one of the concrete patterns described in the "Discrete Components" chapter of [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai).
+
+### Usage
+
+Include the `Raix::Predicate` module in your class and define handlers using block syntax:
+
+```ruby
+class Question
+  include Raix::Predicate
+
+  yes? do |explanation|
+    puts "Affirmative: #{explanation}"
+  end
+
+  no? do |explanation|
+    puts "Negative: #{explanation}"
+  end
+
+  maybe? do |explanation|
+    puts "Uncertain: #{explanation}"
+  end
+end
+
+question = Question.new
+question.ask("Is Ruby a programming language?")
+# => Affirmative: Yes, Ruby is a dynamic, object-oriented programming language...
+```
+
+### Features
+
+- Define handlers for yes, no, and/or maybe responses using the declarative class level block syntax.
+- At least one handler (yes, no, or maybe) must be defined.
+- Handlers receive the full AI response including explanation as an argument.
+- Responses always start with "Yes, ", "No, ", or "Maybe, " followed by an explanation.
+- Make sure to ask a question that can be answered with yes, no, or maybe (otherwise the results are indeterminate).
+
+### Example with Single Handler
+
+You can define only the handlers you need:
+
+```ruby
+class SimpleQuestion
+  include Raix::Predicate
+
+  # Only handle positive responses
+  yes? do |explanation|
+    puts "✅ #{explanation}"
+  end
+end
+
+question = SimpleQuestion.new
+question.ask("Is 2 + 2 = 4?")
+# => ✅ Yes, 2 + 2 equals 4, this is a fundamental mathematical fact.
+```
+
+### Error Handling
+
+The module will raise a RuntimeError if you attempt to ask a question without defining any response handlers:
+
+```ruby
+class InvalidQuestion
+  include Raix::Predicate
+end
+
+question = InvalidQuestion.new
+question.ask("Any question")
+# => RuntimeError: Please define a yes and/or no block
+```
+
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:

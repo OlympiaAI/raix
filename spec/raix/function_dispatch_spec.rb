@@ -14,7 +14,7 @@ class WhatIsTheWeather
   end
 end
 
-RSpec.describe WhatIsTheWeather do
+RSpec.describe WhatIsTheWeather, :vcr do
   subject { described_class.new }
 
   it "can call a function and loop to provide text response" do

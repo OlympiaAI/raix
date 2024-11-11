@@ -10,7 +10,7 @@ class MeaningOfLife
   end
 end
 
-RSpec.describe MeaningOfLife do
+RSpec.describe MeaningOfLife, :vcr do
   subject { described_class.new }
 
   it "does a completion with OpenAI" do

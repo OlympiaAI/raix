@@ -25,7 +25,7 @@ class GettingRealAnthropic
   end
 end
 
-RSpec.describe GettingRealAnthropic do
+RSpec.describe GettingRealAnthropic, :vcr do
   subject { described_class.new }
 
   it "does a completion with prompt caching" do

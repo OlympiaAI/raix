@@ -18,3 +18,6 @@
 
 ## [0.4.2] - 2024-11-05
 - adds support for [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs) with the `prediction` option for OpenAI
+
+## [0.4.3] - 2024-11-11
+- adds support for `Predicate` module

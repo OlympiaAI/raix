@@ -7,6 +7,19 @@ require "open_router"
 require "pry"
 require "raix"
 
+require "vcr"
+
+VCR.configure do |config|
+  config.cassette_library_dir = "spec/vcr" # the directory where your cassettes will be saved
+  config.hook_into :webmock # or :fakeweb
+  config.configure_rspec_metadata!
+  config.ignore_localhost = true
+
+  config.default_cassette_options = {
+    match_requests_on: %i[method uri]
+  }
+end
+
 Dotenv.load
 
 retry_options = {
@@ -44,5 +57,15 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  config.before(:example, :novcr) do
+    VCR.turn_off!
+    WebMock.disable!
+  end
+
+  config.after(:example, :novcr) do
+    VCR.turn_on!
+    WebMock.enable!
   end
 end

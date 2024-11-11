@@ -1,0 +1,112 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"max_completion_tokens":16384,"seed":9999,"temperature":0.0,"model":"gpt-4o","messages":[{"role":"user","content":"What
+        is the meaning of life?"}]}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - Bearer REDACTED
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Mon, 11 Nov 2024 01:39:49 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Expose-Headers:
+      - X-Request-ID
+      Openai-Organization:
+      - user-4zwavkzyrdiz309q8ya0cgco
+      Openai-Processing-Ms:
+      - '4097'
+      Openai-Version:
+      - '2020-10-01'
+      X-Ratelimit-Limit-Requests:
+      - '10000'
+      X-Ratelimit-Limit-Tokens:
+      - '30000000'
+      X-Ratelimit-Remaining-Requests:
+      - '9999'
+      X-Ratelimit-Remaining-Tokens:
+      - '29999975'
+      X-Ratelimit-Reset-Requests:
+      - 6ms
+      X-Ratelimit-Reset-Tokens:
+      - 0s
+      X-Request-Id:
+      - req_d02a075405d7a5a759c649f8122f224f
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Cf-Cache-Status:
+      - DYNAMIC
+      Set-Cookie:
+      - __cf_bm=ojMtLbp_7eBOMXVWQTsf8g0ttiS1mCCeNlUcir2Qps4-1731289189-1.0.1.1-9dOHj5V.nRPaGjJifY05F2CNTcp6CBj.gt4rPwtzylL9HOoeIYiSc_JZA8psvTBg4_gmXZ8a7dQfALOzet5bdA;
+        path=/; expires=Mon, 11-Nov-24 02:09:49 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=TYqMe2vRano0MqvEOy_Eno8gLwd25v9KrOvCjGeJIMI-1731289189951-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 8e0a9202cad2431b-EWR
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "id": "chatcmpl-ASDh3mkyUGKlINj5Pd3C60o0iIhsk",
+          "object": "chat.completion",
+          "created": 1731289185,
+          "model": "gpt-4o-2024-08-06",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": "The meaning of life is a profound and philosophical question that has been contemplated by thinkers, theologians, and scientists for centuries. Different perspectives offer various interpretations:\n\n1. **Philosophical Perspective**: Philosophers like Aristotle and existentialists like Jean-Paul Sartre have explored life's meaning through concepts like purpose, happiness, and individual freedom. For some, the meaning of life is about finding personal fulfillment and creating one's own purpose.\n\n2. **Religious Perspective**: Many religions provide their own interpretations, often involving a relationship with a higher power, spiritual growth, and adherence to certain moral or ethical codes. For example, in Christianity, the meaning of life might involve serving God and preparing for an afterlife.\n\n3. **Scientific Perspective**: From a scientific standpoint, life can be seen as a series of biological processes. Some scientists and secular thinkers might argue that life has no inherent meaning beyond survival and reproduction, and any meaning is constructed by individuals.\n\n4. **Personal Perspective**: On a personal level, many people find meaning through relationships, achievements, creativity, and contributing to the well-being of others.\n\nUltimately, the meaning of life is subjective and can vary greatly from person to person. It often involves a combination of personal beliefs, cultural influences, and individual experiences.",
+                "refusal": null
+              },
+              "logprobs": null,
+              "finish_reason": "stop"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 14,
+            "completion_tokens": 257,
+            "total_tokens": 271,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "system_fingerprint": "fp_159d8341cc"
+        }
+  recorded_at: Mon, 11 Nov 2024 01:39:49 GMT
+recorded_with: VCR 6.2.0
