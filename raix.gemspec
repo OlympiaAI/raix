@@ -30,4 +30,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "activesupport", ">= 6.0"
   spec.add_dependency "open_router", "~> 0.2"
+  spec.add_dependency "ruby-openai"
 end
