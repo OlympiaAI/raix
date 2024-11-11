@@ -12,10 +12,22 @@ module Raix
   # with the OpenRouter Chat Completion API via its client. The module includes a few
   # methods that allow you to build a transcript of messages and then send them to
   # the API for completion. The API will return a response that you can use however
-  # you see fit. If the response includes a function call, the module will dispatch
-  # the function call and return the result. Which implies that function calls need
-  # to be defined on the class that includes this module. (Note: You should probably
-  # use the `FunctionDispatch` module to define functions instead of doing it manually.)
+  # you see fit.
+  #
+  # If the response includes a function call, the module will dispatch the function
+  # call and return the result. Which implies that function calls need to be defined
+  # on the class that includes this module. The `FunctionDispatch` module provides a
+  # Rails-like DSL for declaring and implementing tool functions at the top of your
+  # class instead of having to manually implement them as instance methods. The
+  # primary benefit of using the `FunctionDispatch` module is that it handles
+  # adding the function call results to the ongoing conversation transcript for you.
+  # It also triggers a new chat completion automatically if you've set the `loop`
+  # option to `true`, which is useful for implementing conversational chatbots that
+  # include tool calls.
+  #
+  # Note that some AI models can make more than a single tool function call in a
+  # single response. When that happens, the module will dispatch all of the function
+  # calls sequentially and return an array of results.
   module ChatCompletion
     extend ActiveSupport::Concern
 
@@ -92,13 +104,13 @@ module Raix
         # TODO: add a standardized callback hook for usage events
         # broadcast(:usage_event, usage_subject, self.class.name.to_s, response, premium?)
 
-        # TODO: handle parallel tool calls
-        if (function = response.dig("choices", 0, "message", "tool_calls", 0, "function"))
-          @current_function = function["name"]
-          # dispatch the called function
-          arguments = JSON.parse(function["arguments"].presence || "{}")
-          arguments[:bot_message] = bot_message if respond_to?(:bot_message)
-          return send(function["name"], arguments.with_indifferent_access)
+        tool_calls = response.dig("choices", 0, "message", "tool_calls") || []
+        if tool_calls.any?
+          return tool_calls.map do |tool_call|
+            # dispatch the called function
+            arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
+            send(tool_call["function"]["name"], arguments.with_indifferent_access)
+          end
         end
 
         response.tap do |res|

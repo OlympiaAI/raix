@@ -25,7 +25,7 @@ http_interactions:
       message: OK
     headers:
       Date:
-      - Mon, 11 Nov 2024 01:38:30 GMT
+      - Mon, 11 Nov 2024 02:17:47 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -37,7 +37,7 @@ http_interactions:
       Openai-Organization:
       - user-4zwavkzyrdiz309q8ya0cgco
       Openai-Processing-Ms:
-      - '1522'
+      - '1089'
       Openai-Version:
       - '2020-10-01'
       X-Ratelimit-Limit-Requests:
@@ -53,32 +53,32 @@ http_interactions:
       X-Ratelimit-Reset-Tokens:
       - 0s
       X-Request-Id:
-      - req_bde7c4103d282f5b99f3a203f24ea6d7
+      - req_bb4dd50630147fa7a7283e76802206e5
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Cf-Cache-Status:
       - DYNAMIC
       Set-Cookie:
-      - __cf_bm=AeOmZgC2SVURbXv9yu9sTrYUDxSpOmqCEpZee5UBdIY-1731289110-1.0.1.1-KHtAcVIudUmZcUrBfMenWTBpnriJWZ7zLmNdOHXg6_E0AzrF9oUdBvmhNkToyww0ET3tHlB3wnAWNirFkC7xpg;
-        path=/; expires=Mon, 11-Nov-24 02:08:30 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=1ViW.XBdxhtpE6fHYg5Yis_cUfmflTHyO8K140vqWnE-1731291467-1.0.1.1-WYN54EAHTN1_8VLG3GD3m8FDHHBpYFq9m4wTyyfFHtbHw7A0DYUSnwkBl.yWvOt2mi49l_hHMczZ6EnokRycIw;
+        path=/; expires=Mon, 11-Nov-24 02:47:47 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=wqGLhhvUPvCLRIE1Q18f0mxUAT_Tn4FtYSeFHsOprhM-1731289110227-0.0.1.1-604800000;
+      - _cfuvid=SjbhjFFRMDK8fIw0zUjnhL4x3W.7igsq_rh7xwwAyfU-1731291467866-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       X-Content-Type-Options:
       - nosniff
       Server:
       - cloudflare
       Cf-Ray:
-      - 8e0a9020996841e1-EWR
+      - 8e0ac9b088d87cf3-EWR
       Alt-Svc:
       - h3=":443"; ma=86400
     body:
       encoding: ASCII-8BIT
       string: |
         {
-          "id": "chatcmpl-ASDfohdIyygHjk30tXYfeeiwPiW6q",
+          "id": "chatcmpl-ASEHrxqtcjMvK0gEu8MCobgBykbOs",
           "object": "chat.completion",
-          "created": 1731289108,
+          "created": 1731291467,
           "model": "gpt-4o-2024-08-06",
           "choices": [
             {
@@ -88,7 +88,7 @@ http_interactions:
                 "content": null,
                 "tool_calls": [
                   {
-                    "id": "call_wXrgPz7Ako28ZVXD7JNRodUY",
+                    "id": "call_0NdgGc5alhJHc3O0Rvh98vXh",
                     "type": "function",
                     "function": {
                       "name": "check_weather",
@@ -117,9 +117,9 @@ http_interactions:
               "rejected_prediction_tokens": 0
             }
           },
-          "system_fingerprint": "fp_159d8341cc"
+          "system_fingerprint": "fp_45cf54deae"
         }
-  recorded_at: Mon, 11 Nov 2024 01:38:30 GMT
+  recorded_at: Mon, 11 Nov 2024 02:17:47 GMT
 - request:
     method: post
     uri: https://api.openai.com/v1/chat/completions
@@ -127,8 +127,8 @@ http_interactions:
       encoding: UTF-8
       string: '{"max_completion_tokens":16384,"seed":9999,"temperature":0.0,"tools":[{"type":"function","function":{"name":"check_weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}},"description":"Check
         the weather for a location"}}],"model":"gpt-4o","messages":[{"role":"user","content":"What
-        is the weather in Zipolite, Oaxaca?"},{"role":"assistant","content":null,"tool_calls":[{"id":"0cb04f91-758a-4ef3-8432","type":"function","function":{"name":"check_weather","arguments":"{\"location\":\"Zipolite,
-        Oaxaca\"}"}}]},{"role":"tool","tool_call_id":"0cb04f91-758a-4ef3-8432","name":"check_weather","content":"The
+        is the weather in Zipolite, Oaxaca?"},{"role":"assistant","content":null,"tool_calls":[{"id":"086675ef-5b49-4f23-86b4","type":"function","function":{"name":"check_weather","arguments":"{\"location\":\"Zipolite,
+        Oaxaca\"}"}}]},{"role":"tool","tool_call_id":"086675ef-5b49-4f23-86b4","name":"check_weather","content":"The
         weather in Zipolite, Oaxaca is hot and sunny"}]}'
     headers:
       Content-Type:
@@ -147,7 +147,7 @@ http_interactions:
       message: OK
     headers:
       Date:
-      - Mon, 11 Nov 2024 01:38:31 GMT
+      - Mon, 11 Nov 2024 02:17:48 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -159,7 +159,7 @@ http_interactions:
       Openai-Organization:
       - user-4zwavkzyrdiz309q8ya0cgco
       Openai-Processing-Ms:
-      - '652'
+      - '381'
       Openai-Version:
       - '2020-10-01'
       X-Ratelimit-Limit-Requests:
@@ -175,32 +175,32 @@ http_interactions:
       X-Ratelimit-Reset-Tokens:
       - 0s
       X-Request-Id:
-      - req_ddc56a0dcd3b6e5741d3ae807de72898
+      - req_c602ede1601268024b4af4f7d3edaed3
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Cf-Cache-Status:
       - DYNAMIC
       Set-Cookie:
-      - __cf_bm=OneP2ANhmWGuVo7MTwHvA3vmqlym8UelFilYvTIzDuo-1731289111-1.0.1.1-4zAn6.ho3OCCFvVM5Ogi.Mbop72NkVsMoapTbv5QEGRc5qDrMdnmFiSzhOx0qppfVDBhtpt9xY4N2wPwRrSXrw;
-        path=/; expires=Mon, 11-Nov-24 02:08:31 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=gFFTUN7imDRbG17MceAZRxYDFtOKoLnn9pHP54V6z4k-1731291468-1.0.1.1-3XYn8GpRZzBFitNH6wf7QDCfbmlEVEu9PXvzgIq7B0g0PpyPIsctDLmcLK4vKCJO6z5AYmt7thexa1h_FRR.5g;
+        path=/; expires=Mon, 11-Nov-24 02:47:48 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=dCaA8Gm9s1J6BCot9GBa6XfAcP1gHQ9OEmt9bqBfxAg-1731289111081-0.0.1.1-604800000;
+      - _cfuvid=l4J90pGreQCR_bX0pMbeZ.RT1DDcMYDCjWPPrQB33aw-1731291468692-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       X-Content-Type-Options:
       - nosniff
       Server:
       - cloudflare
       Cf-Ray:
-      - 8e0a902b391b8cec-EWR
+      - 8e0ac9bb2c66422e-EWR
       Alt-Svc:
       - h3=":443"; ma=86400
     body:
       encoding: ASCII-8BIT
       string: |
         {
-          "id": "chatcmpl-ASDfqSLtHr8S4RYa6slYi5WrLcSEV",
+          "id": "chatcmpl-ASEHs0nNEjYOvvNSqa9dD7MApO6mQ",
           "object": "chat.completion",
-          "created": 1731289110,
+          "created": 1731291468,
           "model": "gpt-4o-2024-08-06",
           "choices": [
             {
@@ -229,7 +229,7 @@ http_interactions:
               "rejected_prediction_tokens": 0
             }
           },
-          "system_fingerprint": "fp_159d8341cc"
+          "system_fingerprint": "fp_45cf54deae"
         }
-  recorded_at: Mon, 11 Nov 2024 01:38:31 GMT
+  recorded_at: Mon, 11 Nov 2024 02:17:48 GMT
 recorded_with: VCR 6.2.0
