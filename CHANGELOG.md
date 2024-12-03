@@ -29,5 +29,6 @@
 - adds support for `ResponseFormat`
 - added some missing requires to support String#squish
 
-## [0.4.6] - 2024-11-12
+## [0.4.7] - 2024-11-12
+- adds missing requires `raix/predicate` so that it can be used in a Rails app automatically
 - adds missing openai support for `Predicate`

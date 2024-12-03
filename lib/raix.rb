@@ -4,6 +4,7 @@ require_relative "raix/version"
 require_relative "raix/chat_completion"
 require_relative "raix/function_dispatch"
 require_relative "raix/prompt_declarations"
+require_relative "raix/predicate"
 require_relative "raix/response_format"
 
 # The Raix module provides configuration options for the Raix gem.
