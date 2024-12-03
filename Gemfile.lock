@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    raix (0.4.5)
+    raix (0.4.6)
       activesupport (>= 6.0)
       open_router (~> 0.2)
       ruby-openai (~> 7.0)

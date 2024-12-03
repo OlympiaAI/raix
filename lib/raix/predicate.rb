@@ -27,13 +27,13 @@ module Raix
       base.extend(ClassMethods)
     end
 
-    def ask(question)
+    def ask(question, openai: false)
       raise "Please define a yes and/or no block" if self.class.yes_block.nil? && self.class.no_block.nil?
 
       transcript << { system: "Always answer 'Yes, ', 'No, ', or 'Maybe, ' followed by a concise explanation!" }
       transcript << { user: question }
 
-      chat_completion.tap do |response|
+      chat_completion(openai:).tap do |response|
         if response.downcase.start_with?("yes,")
           instance_exec(response, &self.class.yes_block) if self.class.yes_block
         elsif response.downcase.start_with?("no,")

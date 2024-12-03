@@ -28,3 +28,6 @@
 ## [0.4.5] - 2024-11-11
 - adds support for `ResponseFormat`
 - added some missing requires to support String#squish
+
+## [0.4.6] - 2024-11-12
+- adds missing openai support for `Predicate`
