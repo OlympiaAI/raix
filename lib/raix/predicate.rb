@@ -3,18 +3,23 @@
 module Raix
   # A module for handling yes/no questions using AI chat completion.
   # When included in a class, it provides methods to define handlers for
-  # yes and no responses.
+  # yes and no responses. All handlers are optional. Any response that
+  # does not begin with "yes, " or "no, " will be considered a maybe.
   #
   # @example
   #   class Question
   #     include Raix::Predicate
   #
-  #     yes do |explanation|
+  #     yes? do |explanation|
   #       puts "Yes: #{explanation}"
   #     end
   #
-  #     no do |explanation|
+  #     no? do |explanation|
   #       puts "No: #{explanation}"
+  #     end
+  #
+  #     maybe? do |explanation|
+  #       puts "Maybe: #{explanation}"
   #     end
   #   end
   #
@@ -38,8 +43,10 @@ module Raix
           instance_exec(response, &self.class.yes_block) if self.class.yes_block
         elsif response.downcase.start_with?("no,")
           instance_exec(response, &self.class.no_block) if self.class.no_block
-        elsif response.downcase.start_with?("maybe,")
-          instance_exec(response, &self.class.maybe_block) if self.class.maybe_block
+        elsif self.class.maybe_block
+          instance_exec(response, &self.class.maybe_block)
+        else
+          puts "[Raix::Predicate] Unhandled response: #{response}"
         end
       end
     end
