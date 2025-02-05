@@ -174,7 +174,7 @@ module Raix
       params[:stream] ||= stream.presence
       params[:stream_options] = { include_usage: true } if params[:stream]
 
-      params.delete(:temperature) if model == "o1-preview"
+      params.delete(:temperature) if model.starts_with?("o")
 
       Raix.configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
     end
