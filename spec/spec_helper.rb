@@ -18,6 +18,8 @@ VCR.configure do |config|
   config.default_cassette_options = {
     match_requests_on: %i[method uri]
   }
+
+  config.filter_sensitive_data("REDACTED") { |interaction| interaction.request.headers["Authorization"][0].sub("Bearer ", "") }
 end
 
 Dotenv.load

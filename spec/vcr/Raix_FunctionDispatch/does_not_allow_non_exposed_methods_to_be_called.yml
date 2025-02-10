@@ -1,0 +1,182 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.openai.com/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"max_completion_tokens":16384,"seed":9999,"temperature":0.0,"tools":[{"type":"function","function":{"name":"check_weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}},"description":"Check
+        the weather for a location"}}],"model":"gpt-4o","messages":[{"role":"user","content":"What
+        is the weather in Zipolite, Oaxaca?"}]}'
+    headers:
+      Content-Type:
+      - application/json
+      Authorization:
+      - Bearer REDACTED
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Mon, 10 Feb 2025 09:32:50 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Expose-Headers:
+      - X-Request-ID
+      Openai-Organization:
+      - user-m8pbdozugejmn0wk43d9ab7p
+      Openai-Processing-Ms:
+      - '339'
+      Openai-Version:
+      - '2020-10-01'
+      X-Ratelimit-Limit-Requests:
+      - '500'
+      X-Ratelimit-Limit-Tokens:
+      - '30000'
+      X-Ratelimit-Remaining-Requests:
+      - '499'
+      X-Ratelimit-Remaining-Tokens:
+      - '29973'
+      X-Ratelimit-Reset-Requests:
+      - 120ms
+      X-Ratelimit-Reset-Tokens:
+      - 54ms
+      X-Request-Id:
+      - req_8f743daed35c38dda86e79e9e6599c9c
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Cf-Cache-Status:
+      - DYNAMIC
+      Set-Cookie:
+      - __cf_bm=YHcgjdsRQivSm2EUjUUsyOliQWcwQq9awx3H5MIYvHs-1739179970-1.0.1.1-1R6r1XdMNiD5g0f6UfHnpZKAfPEoZoM8kZ3hxi24FEiX2TBlO8nH9NXw0ajoXCPMA0Ytih.RyOlKZ313ia8_sg;
+        path=/; expires=Mon, 10-Feb-25 10:02:50 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=tbhAdgHU3KwC3ziEtGFATa0kAfl6CR5opGOsZbzhbFU-1739179970626-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 90fb181d7f1d01b9-CDG
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: |
+        {
+          "id": "chatcmpl-AzKRm0H28MYmt0pdVZb4Eo0JVdiDs",
+          "object": "chat.completion",
+          "created": 1739179970,
+          "model": "gpt-4o-2024-08-06",
+          "choices": [
+            {
+              "index": 0,
+              "message": {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_Rb0nsORch5UxEkuIO3QSS8y9",
+                    "type": "function",
+                    "function": {
+                      "name": "check_weather",
+                      "arguments": "{\"location\":\"Zipolite, Oaxaca\"}"
+                    }
+                  }
+                ],
+                "refusal": null
+              },
+              "logprobs": null,
+              "finish_reason": "tool_calls"
+            }
+          ],
+          "usage": {
+            "prompt_tokens": 54,
+            "completion_tokens": 18,
+            "total_tokens": 72,
+            "prompt_tokens_details": {
+              "cached_tokens": 0,
+              "audio_tokens": 0
+            },
+            "completion_tokens_details": {
+              "reasoning_tokens": 0,
+              "audio_tokens": 0,
+              "accepted_prediction_tokens": 0,
+              "rejected_prediction_tokens": 0
+            }
+          },
+          "service_tier": "default",
+          "system_fingerprint": "fp_50cad350e4"
+        }
+  recorded_at: Mon, 10 Feb 2025 09:32:50 GMT
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":"What is the weather in Zipolite,
+        Oaxaca?"}],"model":"gpt-4o","max_tokens":1000,"seed":9999,"temperature":0.0,"tools":[{"type":"function","function":{"name":"check_weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}},"description":"Check
+        the weather for a location"}}]}'
+    headers:
+      Authorization:
+      - Bearer REDACTED
+      Content-Type:
+      - application/json
+      X-Title:
+      - OpenRouter Ruby Client
+      Http-Referer:
+      - https://github.com/OlympiaAI/open_router
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Mon, 10 Feb 2025 09:32:50 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      X-Clerk-Auth-Message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      X-Clerk-Auth-Reason:
+      - token-invalid
+      X-Clerk-Auth-Status:
+      - signed-out
+      Vary:
+      - Accept-Encoding
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - 90fb1820bb816f0b-CDG
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n\n         \n\n         \n\n         \n\n         \n\n
+        \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+        \        \n\n         \n{\"id\":\"gen-1739179970-vlA3K4BnDRuk8Termloo\",\"provider\":\"OpenAI\",\"model\":\"openai/gpt-4o\",\"object\":\"chat.completion\",\"created\":1739179970,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"tool_calls\",\"native_finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"refusal\":null,\"tool_calls\":[{\"index\":0,\"id\":\"call_KxJBkfdZFGJEoOLF7vdfBtjf\",\"type\":\"function\",\"function\":{\"name\":\"check_weather\",\"arguments\":\"{\\\"location\\\":\\\"Zipolite,
+        Oaxaca\\\"}\"}}]}}],\"system_fingerprint\":\"fp_4691090a87\",\"usage\":{\"prompt_tokens\":54,\"completion_tokens\":18,\"total_tokens\":72}}"
+  recorded_at: Mon, 10 Feb 2025 09:32:51 GMT
+recorded_with: VCR 6.2.0

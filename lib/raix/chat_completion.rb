@@ -110,7 +110,10 @@ module Raix
           return tool_calls.map do |tool_call|
             # dispatch the called function
             arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
-            send(tool_call["function"]["name"], arguments.with_indifferent_access)
+            function_name = tool_call["function"]["name"]
+            raise "Unauthorized function call: #{function_name}" unless self.class.functions.map { |f| f[:name].to_sym }.include?(function_name.to_sym)
+
+            send(function_name, arguments.with_indifferent_access)
           end
         end
 
@@ -174,7 +177,7 @@ module Raix
       params[:stream] ||= stream.presence
       params[:stream_options] = { include_usage: true } if params[:stream]
 
-      params.delete(:temperature) if model.starts_with?("o")
+      params.delete(:temperature) if model.start_with?("o")
 
       Raix.configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
     end
