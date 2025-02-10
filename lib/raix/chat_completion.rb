@@ -110,7 +110,10 @@ module Raix
           return tool_calls.map do |tool_call|
             # dispatch the called function
             arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
-            send(tool_call["function"]["name"], arguments.with_indifferent_access)
+            function_name = tool_call["function"]["name"]
+            raise "Unauthorized function call: #{function_name}" unless self.class.functions.map { |f| f[:name].to_sym }.include?(function_name.to_sym)
+
+            send(function_name, arguments.with_indifferent_access)
           end
         end
 
