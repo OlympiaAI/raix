@@ -101,6 +101,8 @@ RSpec.describe WhatIsTheWeather do
 end
 ```
 
+Note that for security reasons, dispatching functions only works with functions implemented using `Raix::FunctionDispatch#function` or directly on the class.
+
 #### Multiple Tool Calls
 
 Some AI models (like GPT-4) can make multiple tool calls in a single response. When this happens, Raix will automatically handle all the function calls sequentially and return an array of their results. Here's an example:
