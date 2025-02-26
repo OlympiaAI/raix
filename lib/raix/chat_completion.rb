@@ -89,7 +89,7 @@ module Raix
 
       begin
         response = if openai
-                     openai_request(params:, model: openai, messages:)
+                     openai_request(params:, model:, messages:)
                    else
                      openrouter_request(params:, model:, messages:)
                    end
