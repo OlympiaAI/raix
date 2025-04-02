@@ -50,16 +50,20 @@ module Raix
       {}.tap do |response|
         case input
         when Array
-          properties = {}
-          input.each { |item| properties.merge!(decode(item)) }
-
           response[:type] = "array"
-          response[:items] = {
-            type: "object",
-            properties:,
-            required: properties.keys.select { |key| properties[key].delete(:required) },
-            additionalProperties: false
-          }
+
+          if input.size == 1 && input.first.is_a?(String)
+            response[:items] = { type: input.first }
+          else
+            properties = {}
+            input.each { |item| properties.merge!(decode(item)) }
+            response[:items] = {
+              type: "object",
+              properties:,
+              required: properties.keys.select { |key| properties[key].delete(:required) },
+              additionalProperties: false
+            }
+          end
         when Hash
           input.each do |key, value|
             response[key] = if value.is_a?(Hash) && value.key?(:type)
