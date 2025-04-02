@@ -44,7 +44,7 @@ module Raix
     # @option params [Boolean] :openai (false) Whether to use OpenAI's API instead of OpenRouter's.
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @return [String|Hash] The completed chat response.
-    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false)
+    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true)
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
@@ -84,7 +84,10 @@ module Raix
       self.model ||= Raix.configuration.model
 
       adapter = MessageAdapters::Base.new(self)
-      messages = transcript.flatten.compact.map { |msg| adapter.transform(msg) }
+
+      # duplicate the transcript to avoid race conditions in situations where
+      # chat_completion is called multiple times in parallel
+      messages = transcript.flatten.compact.map { |msg| adapter.transform(msg) }.dup
       raise "Can't complete an empty transcript" if messages.blank?
 
       begin
@@ -119,6 +122,9 @@ module Raix
 
         response.tap do |res|
           content = res.dig("choices", 0, "message", "content")
+
+          transcript << { assistant: content } if save_response
+
           if json
             content = content.squish
             return JSON.parse(content)

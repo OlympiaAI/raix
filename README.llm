@@ -1,0 +1,106 @@
+# Raix (Ruby AI eXtensions)
+Raix adds LLM-based AI functionality to Ruby classes. It supports OpenAI or OpenRouter as providers and can work in non-Rails apps if you include ActiveSupport.
+
+## Chat Completion
+You must include `Raix::ChatCompletion`. It gives you a `transcript` array for messages and a `chat_completion` method that sends them to the AI.
+
+```ruby
+class MeaningOfLife
+  include Raix::ChatCompletion
+end
+
+ai = MeaningOfLife.new
+ai.transcript << { user: "What is the meaning of life?" }
+puts ai.chat_completion
+```
+
+You can add messages using either `{ user: "..." }` or `{ role: "user", content: "..." }`.
+
+### Predicted Outputs
+Pass `prediction` to support [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs):
+```ruby
+ai.chat_completion(openai: "gpt-4o", params: { prediction: "..." })
+```
+
+### Prompt Caching
+When using Anthropic models, you can specify `cache_at`. Messages above that size get sent as ephemeral multipart segments.
+```ruby
+ai.chat_completion(params: { cache_at: 1000 })
+```
+
+## Function Dispatch
+Include `Raix::FunctionDispatch` to declare functions AI can call in a chat loop. Use `chat_completion(loop: true)` so the AI can call functions and generate more messages until it outputs a final text response.
+
+```ruby
+class WhatIsTheWeather
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :check_weather, "Check the weather for a location", location: { type: "string" } do |args|
+    "The weather in #{args[:location]} is hot and sunny"
+  end
+end
+```
+
+If the AI calls multiple functions at once, Raix handles them in sequence and returns an array of results. Call `stop_looping!` inside a function to end the loop.
+
+## Prompt Declarations
+Include `Raix::PromptDeclarations` to define a chain of prompts in order. Each prompt can be inline text or a callable class that also includes `ChatCompletion`.
+
+```ruby
+class PromptSubscriber
+  include Raix::ChatCompletion
+  include Raix::PromptDeclarations
+
+  prompt call: FetchUrlCheck
+  prompt call: MemoryScan
+  prompt text: -> { user_message.content }
+
+  def message_created(user_message)
+    chat_completion(loop: true, openai: "gpt-4o")
+  end
+end
+```
+
+## Predicate Module
+Include `Raix::Predicate` to handle yes/no/maybe questions. Define blocks with the `yes?`, `no?`, and `maybe?` methods.
+
+```ruby
+class Question
+  include Raix::Predicate
+
+  yes? { |explanation| puts "Affirmative: #{explanation}" }
+  no?  { |explanation| puts "Negative: #{explanation}" }
+
+end
+```
+
+## ResponseFormat (Experimental)
+Use `Raix::ResponseFormat` to enforce JSON schemas for structured responses.
+
+```ruby
+format = Raix::ResponseFormat.new("PersonInfo", {
+  name: { type: "string" },
+  age: { type: "integer" }
+})
+
+class StructuredResponse
+  include Raix::ChatCompletion
+
+  def analyze_person(name)
+    chat_completion(response_format: format)
+  end
+end
+```
+
+## Installation
+Add `gem "raix"` to your Gemfile or run `gem install raix`. Configure an OpenRouter or OpenAI client in an initializer:
+
+```ruby
+# config/initializers/raix.rb
+Raix.configure do |config|
+  config.openrouter_client = OpenRouter::Client.new
+end
+```
+Make sure you have valid API tokens for your chosen provider.
+```

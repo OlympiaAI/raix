@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.6.0] - 2024-11-12
+- adds `save_response` option to `chat_completion` to control transcript updates
+- fixes potential race conditions in transcript handling
+
 ## [0.1.0] - 2024-04-03
 
 - Initial release, placeholder gem

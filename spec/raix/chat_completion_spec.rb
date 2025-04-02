@@ -36,6 +36,7 @@ RSpec.describe MeaningOfLife, :vcr do
 
     it "does a completion with OpenAI" do
       expect(completion).to start_with("THE MEANING OF LIFE")
+      expect(subject.transcript.last).to eq({ assistant: completion })
       expect(response.dig("usage", "completion_tokens_details", "accepted_prediction_tokens")).to be > 0
       expect(response.dig("usage", "completion_tokens_details", "rejected_prediction_tokens")).to be > 0
     end
