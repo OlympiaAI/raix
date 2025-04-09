@@ -68,13 +68,17 @@ module Raix
       params[:top_logprobs] ||= top_logprobs.presence
       params[:top_p] ||= top_p.presence
 
+      json = true if params[:response_format].is_a?(Raix::ResponseFormat)
+
       if json
         unless openai
           params[:provider] ||= {}
           params[:provider][:require_parameters] = true
         end
-        params[:response_format] ||= {}
-        params[:response_format][:type] = "json_object"
+        if params[:response_format].blank?
+          params[:response_format] ||= {}
+          params[:response_format][:type] = "json_object"
+        end
       end
 
       # used by FunctionDispatch
