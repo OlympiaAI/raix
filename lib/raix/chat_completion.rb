@@ -40,7 +40,7 @@ module Raix
     #
     # @param params [Hash] The parameters for chat completion.
     # @option loop [Boolean] :loop (false) Whether to loop the chat completion after function calls.
-    # @option params [Boolean] :json (false) Whether to return the parse the response as a JSON object.
+    # @option params [Boolean] :json (false) Whether to return the parse the response as a JSON object. Will search for <json> tags in the response first, then fall back to the default JSON parsing of the entire response.
     # @option params [Boolean] :openai (false) Whether to use OpenAI's API instead of OpenRouter's.
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @return [String|Hash] The completed chat response.
@@ -124,9 +124,12 @@ module Raix
           content = res.dig("choices", 0, "message", "content")
 
           transcript << { assistant: content } if save_response
+          content = content.squish
 
           if json
-            content = content.squish
+            # Make automatic JSON parsing available to non-OpenAI providers that don't support the response_format parameter
+            content = content.match(%r{<json>(.*?)</json>}m)[1] if content.include?("<json>")
+
             return JSON.parse(content)
           end
 

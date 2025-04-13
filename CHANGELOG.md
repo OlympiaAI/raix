@@ -1,4 +1,22 @@
-## [Unreleased]
+## [0.7] - 2024-04-02
+- adds support for `until` condition in `PromptDeclarations` to control prompt looping
+- adds support for `if` and `unless` conditions in `PromptDeclarations` to control prompt execution
+- adds support for `success` callback in `PromptDeclarations` to handle prompt responses
+- adds support for `stream` handler in `PromptDeclarations` to control response streaming
+- adds support for `params` in `PromptDeclarations` to customize API parameters per prompt
+- adds support for `system` directive in `PromptDeclarations` to set per-prompt system messages
+- adds support for `call` in `PromptDeclarations` to delegate to callable prompt objects
+- adds support for `text` in `PromptDeclarations` to specify prompt content via lambda, string, or symbol
+- adds support for `raw` parameter in `PromptDeclarations` to return raw API responses
+- adds support for `openai` parameter in `PromptDeclarations` to use OpenAI directly
+- adds support for `prompt` parameter in `PromptDeclarations` to specify initial prompt
+- adds support for `last_response` in `PromptDeclarations` to access previous prompt responses
+- adds support for `current_prompt` in `PromptDeclarations` to access current prompt context
+- adds support for `MAX_LOOP_COUNT` in `PromptDeclarations` to prevent infinite loops
+- adds support for `execute_ai_request` in `PromptDeclarations` to handle API calls
+- adds support for `chat_completion_from_superclass` in `PromptDeclarations` to handle superclass calls
+- adds support for `model`, `temperature`, and `max_tokens` in `PromptDeclarations` to access prompt parameters
+- Make automatic JSON parsing available to non-OpenAI providers that don't support the response_format parameter by scanning for json XML tags
 
 ## [0.6.0] - 2024-11-12
 - adds `save_response` option to `chat_completion` to control transcript updates

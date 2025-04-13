@@ -10,8 +10,10 @@ Style/StringLiteralsInInterpolation:
   Enabled: true
   EnforcedStyle: double_quotes
 
+Style/IfUnlessModifier:
+  Enabled: false
 Layout/LineLength:
-  Max: 180
+  Enabled: false
 
 Metrics/BlockLength:
   Enabled: false
