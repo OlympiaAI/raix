@@ -78,6 +78,26 @@ Note that there is a limit of four breakpoints, and the cache will expire within
     },
 ```
 
+### JSON Mode
+
+Raix supports JSON mode for chat completions, which ensures that the AI model's response is valid JSON. This is particularly useful when you need structured data from the model.
+
+When using JSON mode with OpenAI models, Raix will automatically set the `response_format` parameter on requests accordingly, and attempt to parse the entire response body as JSON.
+When using JSON mode with other models (e.g. Anthropic) that don't support `response_format`, Raix will look for JSON content inside of &lt;json&gt; XML tags in the response, before
+falling back to parsing the entire response body. Make sure you tell the AI to reply with JSON inside of XML tags.
+
+```ruby
+>> my_class.chat_completion(json: true)
+=> { "key": "value" }
+```
+
+When using JSON mode with non-OpenAI providers, Raix automatically sets the `require_parameters` flag to ensure proper JSON formatting. You can also combine JSON mode with other parameters:
+
+```ruby
+>> my_class.chat_completion(json: true, openai: "gpt-4o")
+=> { "key": "value" }
+```
+
 ### Use of Tools/Functions
 
 The second (optional) module that you can add to your Ruby classes after `ChatCompletion` is `FunctionDispatch`. It lets you declare and implement functions to be called at the AI's discretion as part of a chat completion "loop" in a declarative, Rails-like "DSL" fashion.
@@ -129,6 +149,24 @@ example = MultipleToolExample.new
 example.transcript << { user: "Please use both tools" }
 results = example.chat_completion(openai: "gpt-4o")
 # => ["Result from first tool", "Result from second tool"]
+```
+
+Note that as of version 0.6.1, function return values are properly returned from tool calls, whether in single or multiple tool call scenarios. This means you can use the return values from your functions in your application logic.
+
+```ruby
+class DiceRoller
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :roll_dice, "Roll a die with specified number of faces", faces: { type: :integer } do |arguments|
+    rand(1..arguments[:faces])
+  end
+end
+
+roller = DiceRoller.new
+roller.transcript << { user: "Roll a d20 twice" }
+results = roller.chat_completion(openai: "gpt-4o")
+# => [15, 7] # Actual random dice roll results
 ```
 
 #### Manually Stopping a Loop
@@ -226,7 +264,6 @@ class PromptSubscriber
   end
 
   ...
-
 end
 
 class FetchUrlCheck
@@ -267,6 +304,80 @@ class FetchUrlCheck
 Notably, Olympia does not use the `FunctionDispatch` module in its primary conversation loop because it does not have a fixed set of tools that are included in every single prompt. Functions are made available dynamically based on a number of factors including the user's plan tier and capabilities of the assistant with whom the user is conversing.
 
 Streaming of the AI's response to the end user is handled by the `ReplyStream` class, passed to the final prompt declaration as its `stream` parameter. [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai) devotes a whole chapter to describing how to write your own `ReplyStream` class.
+
+#### Additional PromptDeclarations Options
+
+The `PromptDeclarations` module supports several additional options that can be used to customize prompt behavior:
+
+```ruby
+class CustomPromptExample
+  include Raix::ChatCompletion
+  include Raix::PromptDeclarations
+
+  # Basic prompt with text
+  prompt text: "Process this input"
+
+  # Prompt with system directive
+  prompt system: "You are a helpful assistant",
+        text: "Analyze this text"
+
+  # Prompt with conditions
+  prompt text: "Process this input",
+        if: -> { some_condition },
+        unless: -> { some_other_condition }
+
+  # Prompt with success callback
+  prompt text: "Process this input",
+        success: ->(response) { handle_response(response) }
+
+  # Prompt with custom parameters
+  prompt text: "Process with custom settings",
+        params: { temperature: 0.7, max_tokens: 1000 }
+
+  # Prompt with until condition for looping
+  prompt text: "Keep processing until complete",
+        until: -> { processing_complete? }
+
+  # Prompt with raw response
+  prompt text: "Get raw response",
+        raw: true
+
+  # Prompt using OpenAI directly
+  prompt text: "Use OpenAI",
+        openai: true
+end
+```
+
+The available options include:
+
+- `system`: Set a system directive for the prompt
+- `if`/`unless`: Control prompt execution with conditions
+- `success`: Handle prompt responses with callbacks
+- `params`: Customize API parameters per prompt
+- `until`: Control prompt looping
+- `raw`: Get raw API responses
+- `openai`: Use OpenAI directly
+- `stream`: Control response streaming
+- `call`: Delegate to callable prompt objects
+
+You can also access the current prompt context and previous responses:
+
+```ruby
+class ContextAwarePrompt
+  include Raix::ChatCompletion
+  include Raix::PromptDeclarations
+
+  def process_with_context
+    # Access current prompt
+    current_prompt.params[:temperature]
+
+    # Access previous response
+    last_response
+
+    chat_completion
+  end
+end
+```
 
 ## Predicate Module
 
@@ -422,7 +533,7 @@ class StructuredResponse
     })
 
     transcript << { user: "Analyze the person named #{name}" }
-    chat_completion(response_format: format)
+    chat_completion(params: { response_format: format })
   end
 end
 

@@ -70,7 +70,7 @@ module Raix
               }
             ]
           }
-          instance_exec(arguments, &block).tap do |content|
+          result = instance_exec(arguments, &block).tap do |content|
             transcript << {
               role: "tool",
               tool_call_id: id,
@@ -81,6 +81,10 @@ module Raix
           end
 
           chat_completion(**chat_completion_args) if loop
+
+          # Return the result of the function call in case that's what the caller wants
+          # https://github.com/OlympiaAI/raix/issues/16
+          result
         end
       end
     end

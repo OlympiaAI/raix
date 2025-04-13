@@ -43,8 +43,9 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
   it "supports multiple tool calls in a single response" do
     subject = MultipleToolCalls.new(callback)
     subject.transcript << { user: "For testing purposes, call the provided tool function twice in a single response." }
-    expect(callback).to receive(:call).twice
-    subject.chat_completion(openai: "gpt-4o")
+    expect(callback).to receive(:call).twice.and_return("foo", "bar")
+    response = subject.chat_completion(openai: "gpt-4o")
+    expect(response).to eq(%w[foo bar])
   end
 
   # This simulates a middleman on the network that rewrites the function name to anything else
