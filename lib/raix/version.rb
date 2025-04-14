@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Raix
-  VERSION = "0.7"
+  VERSION = "0.7.1"
 end
