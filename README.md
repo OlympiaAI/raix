@@ -23,6 +23,7 @@ end
 
 => "The question of the meaning of life is one of the most profound and enduring inquiries in philosophy, religion, and science.
     Different perspectives offer various answers..."
+```
 
 By default, Raix will automatically add the AI's response to the transcript. This behavior can be controlled with the `save_response` parameter, which defaults to `true`. You may want to set it to `false` when making multiple chat completion calls during the lifecycle of a single object (whether sequentially or in parallel) and want to manage the transcript updates yourself:
 
