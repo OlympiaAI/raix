@@ -4,7 +4,7 @@
 
 Raix (pronounced "ray" because the x is silent) is a library that gives you everything you need to add discrete large-language model (LLM) AI components to your Ruby applications. Raix consists of proven code that has been extracted from [Olympia](https://olympia.chat), the world's leading virtual AI team platform, and probably one of the biggest and most successful AI chat projects written completely in Ruby.
 
-Understanding the how to use discrete AI components in otherwise normal code is key to productively leveraging Raix, and the subject of a book written by Raix's author Obie Fernandez, titled [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai). You can easily support the ongoing development of this project by buying the book at Leanpub.
+Understanding how to use discrete AI components in otherwise normal code is key to productively leveraging Raix, and the subject of a book written by Raix's author Obie Fernandez, titled [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai). You can easily support the ongoing development of this project by buying the book at Leanpub.
 
 At the moment, Raix natively supports use of either OpenAI or OpenRouter as its underlying AI provider. Eventually you will be able to specify your AI provider via an adapter, kind of like ActiveRecord maps to databases. Note that you can also use Raix to add AI capabilities to non-Rails applications as long as you include ActiveSupport as a dependency. Extracting the base code to its own standalone library without Rails dependencies is on the roadmap, but not a high priority.
 
@@ -33,7 +33,7 @@ By default, Raix will automatically add the AI's response to the transcript. Thi
 
 #### Transcript Format
 
-The transcript accepts both abbreviated and standard OpenAI message hash formats. The abbreviated format, suitable for system, assistant, and user messages is simply a mapping of `role => content`, as show in the example above.
+The transcript accepts both abbreviated and standard OpenAI message hash formats. The abbreviated format, suitable for system, assistant, and user messages is simply a mapping of `role => content`, as shown in the example above.
 
 ```ruby
 transcript << { user: "What is the meaning of life?" }
@@ -57,7 +57,7 @@ Raix supports [Predicted Outputs](https://platform.openai.com/docs/guides/latenc
 
 ### Prompt Caching
 
-Raix supports [Anthropic-style prompt caching](https://openrouter.ai/docs/prompt-caching#anthropic-claude) when using Anthropic's Claud family of models. You can specify a `cache_at` parameter when doing a chat completion. If the character count for the content of a particular message is longer than the cache_at parameter, it will be sent to Anthropic as a multipart message with a cache control "breakpoint" set to "ephemeral".
+Raix supports [Anthropic-style prompt caching](https://openrouter.ai/docs/prompt-caching#anthropic-claude) when using Anthropic's Claude family of models. You can specify a `cache_at` parameter when doing a chat completion. If the character count for the content of a particular message is longer than the cache_at parameter, it will be sent to Anthropic as a multipart message with a cache control "breakpoint" set to "ephemeral".
 
 Note that there is a limit of four breakpoints, and the cache will expire within five minutes. Therefore, it is recommended to reserve the cache breakpoints for large bodies of text, such as character cards, CSV data, RAG data, book chapters, etc. Raix does not enforce a limit on the number of breakpoints, which means that you might get an error if you try to cache too many messages.
 
@@ -240,7 +240,7 @@ class PromptSubscriber
 
   attr_accessor :conversation, :bot_message, :user_message
 
-  # many other declarations ommitted...
+  # many other declarations omitted...
 
   prompt call: FetchUrlCheck
 
@@ -564,13 +564,13 @@ You will also need to configure the OpenRouter API access token as per the instr
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
-Specs require `OR_ACCESS_TOKEN` and `OAI_ACCESS_TOKEN` environment variables, for access to OpenRouter and OpenAI, respectively. You can add those keys to a local unversionsed `.env` file and they will be picked up by the `dotenv` gem.
+Specs require `OR_ACCESS_TOKEN` and `OAI_ACCESS_TOKEN` environment variables, for access to OpenRouter and OpenAI, respectively. You can add those keys to a local unversioned `.env` file and they will be picked up by the `dotenv` gem.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[OlympiaAI]/raix. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[OlympiaAI]/raix/blob/main/CODE_OF_CONDUCT.md).
+Bug reports and pull requests are welcome on GitHub at https://github.com/OlympiaAI/raix. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/OlympiaAI/raix/blob/main/CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -578,4 +578,4 @@ The gem is available as open source under the terms of the [MIT License](https:/
 
 ## Code of Conduct
 
-Everyone interacting in the Raix project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[OlympiaAI]/raix/blob/main/CODE_OF_CONDUCT.md).
+Everyone interacting in the Raix project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/OlympiaAI/raix/blob/main/CODE_OF_CONDUCT.md).
