@@ -56,27 +56,31 @@ module Raix
 
         define_method(name) do |arguments|
           id = SecureRandom.uuid[0, 23]
-          transcript << {
-            role: "assistant",
-            content: nil,
-            tool_calls: [
+          instance_exec(arguments, &block).tap do |content|
+            # add in one operation to prevent race condition and potential wrong
+            # interleaving of tool calls in multi-threaded environments
+            transcript << [
               {
-                id:,
-                type: "function",
-                function: {
-                  name:,
-                  arguments: arguments.to_json
-                }
+                role: "assistant",
+                content: nil,
+                tool_calls: [
+                  {
+                    id:,
+                    type: "function",
+                    function: {
+                      name:,
+                      arguments: arguments.to_json
+                    }
+                  }
+                ]
+              },
+              {
+                role: "tool",
+                tool_call_id: id,
+                name:,
+                content: content.to_s
               }
             ]
-          }
-          instance_exec(arguments, &block).tap do |content|
-            transcript << {
-              role: "tool",
-              tool_call_id: id,
-              name:,
-              content: content.to_s
-            }
             # TODO: add on_error handler as optional parameter to function
           end
 
