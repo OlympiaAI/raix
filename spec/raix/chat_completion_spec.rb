@@ -21,6 +21,10 @@ RSpec.describe MeaningOfLife, :vcr do
     expect(subject.chat_completion).to include("meaning of life is")
   end
 
+  it "accepts a messages parameter to override the transcript" do
+    expect(subject.chat_completion(openai: "gpt-4.1-nano", messages: [{ user: "What is the meaning of life?" }])).to include("meaning of life is")
+  end
+
   context "with predicted outputs" do
     let(:completion) { subject.chat_completion(openai: "gpt-4o", params: { prediction: }) }
     let(:prediction) do

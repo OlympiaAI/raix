@@ -47,6 +47,12 @@ transcript << { role: "user", content: "What is the meaning of life?" }
 
 One of the advantages of OpenRouter and the reason that it is used by default by this library is that it handles mapping message formats from the OpenAI standard to whatever other model you're wanting to use (Anthropic, Cohere, etc.)
 
+Note that it's possible to override the current object's transcript by passing a `messages` array to `chat_completion`. This allows for multiple threads to share a single conversation context in parallel, by deferring when they write their responses back to the transcript.
+
+```
+chat_completion(openai: "gpt-4.1-nano", messages: [{ user: "What is the meaning of life?" }])
+```
+
 ### Predicted Outputs
 
 Raix supports [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs) with the `prediction` parameter for OpenAI.
