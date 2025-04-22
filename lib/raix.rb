@@ -6,6 +6,7 @@ require_relative "raix/function_dispatch"
 require_relative "raix/prompt_declarations"
 require_relative "raix/predicate"
 require_relative "raix/response_format"
+require_relative "raix/mcp"
 
 # The Raix module provides configuration options for the Raix gem.
 module Raix
