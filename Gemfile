@@ -5,11 +5,6 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in raix-rails.gemspec
 gemspec
 
-gem "activesupport", ">= 6.0"
-gem "faraday-retry"
-gem "open_router", "~> 0.3"
-gem "ruby-openai", "~> 7.0"
-
 group :development do
   gem "dotenv", ">= 2"
   gem "guard"

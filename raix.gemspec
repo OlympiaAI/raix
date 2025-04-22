@@ -29,6 +29,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "activesupport", ">= 6.0"
+  spec.add_dependency "async-http-faraday", "~> 0.21"
+  spec.add_dependency "faraday-retry", "~> 2.0"
   spec.add_dependency "open_router", "~> 0.2"
-  spec.add_dependency "ruby-openai", "~> 7.0"
+  spec.add_dependency "ruby-openai", "~> 7"
 end

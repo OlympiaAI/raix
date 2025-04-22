@@ -1,4 +1,20 @@
+## [0.8.0] - 2025-05-08
+### Added
+* **MCP integration** — new `Raix::MCP` concern and `mcp` DSL for declaring remote MCP servers.
+  * Automatically fetches `tools/list`, registers remote tools as OpenAI‑compatible function schemas, and defines proxy methods that forward `tools/call`.
+  * `ChatCompletion#tools` now returns remote MCP tools alongside local `function` declarations.
+
+### Changed
+* `lib/raix.rb` now requires `raix/mcp` so the concern is auto‑loaded.
+
+### Fixed
+* Internal transcript handling spec expectations updated.
+
+### Specs
+* Added `spec/raix/mcp_spec.rb` with comprehensive stubs for tools discovery & call flow.
+
 ## [0.7.3] - 2025-04-23
+- commit function call and result to transcript in one operation for thread safety
 
 ## [0.7.2] - 2025-04-19
 - adds support for `messages` parameter in `chat_completion` to override the transcript

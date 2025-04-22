@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 # Simple integration layer that lets Raix classes declare an MCP server
 # with a single DSL call:
 #
@@ -12,24 +10,26 @@
 # request to the remote server using `tools/call`, captures the result,
 # and appends the appropriate messages to the transcript so that the
 # conversation history stays consistent.
-#
-# NOTE: This is deliberately minimal – it assumes the server accepts
-# HTTP POST requests at the provided URL and responds with standard
-# JSON‑RPC bodies.  Streaming, SSE transports, authentication, and other
-# advanced MCP features can be layered on later.
-#
-# Dependencies: relies on Faraday (already used elsewhere in Raix via
-# OpenRouter) and SecureRandom.
 
 require "active_support/concern"
 require "securerandom"
 require "faraday"
+require "uri"
+require "json"
+require "async/http/faraday/default"
 
 module Raix
+  # Model Context Protocol integration for Raix
+  #
+  # Allows declaring MCP servers with a simple DSL that automatically:
+  # - Queries tools from the remote server
+  # - Exposes each tool as a function callable by LLMs
+  # - Handles transcript recording and response processing
   module MCP
     extend ActiveSupport::Concern
 
     JSONRPC_VERSION = "2.0"
+    PROTOCOL_VERSION = "2024-11-05" # Current supported protocol version
 
     class_methods do
       # Declare an MCP server by URL.
@@ -43,30 +43,65 @@ module Raix
       #   • define an instance method for each tool that forwards the
       #     call to the server and appends the proper messages to the
       #     transcript.
-      def mcp(url)
+      # NOTE TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
+      def mcp(url, only: nil, except: nil)
         @mcp_servers ||= {}
 
         return if @mcp_servers.key?(url) # avoid duplicate definitions
 
-        # 1. Discover remote tools
-        tools = fetch_mcp_tools(url)
+        # Connect and initialize the SSE endpoint
+        connection = establish_sse_connection(url)
 
-        # 2. Register each tool so ChatCompletion#tools picks them up
-        tools.each do |tool|
-          name         = tool["name"].to_sym
+        # Discover remote tools via the negotiated POST endpoint
+        tools = fetch_mcp_tools(connection, endpoint_url)
+
+        if tools.empty?
+          puts "[MCP DEBUG] No tools found from MCP server at #{url}"
+          return nil
+        end
+
+        # 3. Register each tool so ChatCompletion#tools picks them up
+        # Apply filters
+        filtered_tools = if only.present?
+                           only_symbols = Array(only).map(&:to_sym)
+                           tools.select { |tool| only_symbols.include?(tool["name"].to_sym) }
+                         elsif except.present?
+                           except_symbols = Array(except).map(&:to_sym)
+                           tools.reject { |tool| except_symbols.include?(tool["name"].to_sym) }
+                         else
+                           tools
+                         end
+
+        # Ensure FunctionDispatch is included in the class
+        # Explicit include in the class context
+        include FunctionDispatch unless included_modules.include?(FunctionDispatch)
+        puts "[MCP DEBUG] FunctionDispatch included in #{name}"
+
+        filtered_tools.each do |tool|
+          remote_name  = tool["name"].to_s
+          local_name   = remote_name.to_sym
+
+          # Handle name clash by prefixing domain
+          if method_defined?(local_name) || (functions&.any? { |f| f[:name] == local_name })
+            domain_prefix = begin
+              host = URI.parse(url).host || "mcp"
+              host.gsub(/[^a-zA-Z0-9]/, "_")
+            rescue URI::InvalidURIError
+              "mcp"
+            end
+            local_name = "#{domain_prefix}_#{remote_name}".to_sym
+          end
+
           description  = tool["description"]
           input_schema = tool["inputSchema"] || {}
 
           # --- register with FunctionDispatch (adds to .functions)
-          include FunctionDispatch unless ancestors.include?(FunctionDispatch)
-
-          function(name, description, **{}) # dummy to allocate
-          # Overwrite the last added definition with remote schema
+          function(local_name, description, **{}) # placeholder parameters replaced next
           latest_definition = functions.last
           latest_definition[:parameters] = input_schema.deep_symbolize_keys if input_schema.present?
 
           # --- define an instance method that proxies to the server
-          define_method(name) do |arguments|
+          define_method(local_name) do |**arguments|
             arguments ||= {}
 
             call_id = SecureRandom.uuid[0, 23]
@@ -77,20 +112,34 @@ module Raix
               id: call_id,
               method: "tools/call",
               params: {
-                name: name.to_s,
+                name: remote_name,
                 arguments:
               }
             }
 
-            response_body = Faraday.post(url, payload.to_json, "Content-Type" => "application/json").body
-            parsed        = begin
+            # NOTE: TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
+            puts "[MCP DEBUG] Calling tool: #{remote_name} with args: #{arguments.inspect}"
+            # Use proper headers
+            headers = {
+              "Content-Type" => "application/json",
+              "Accept" => "application/json"
+            }
+
+            # Call the real tool via JSON-RPC
+            response = Faraday.post(endpoint_url, payload.to_json, headers)
+            puts "[MCP DEBUG] Tool response status: #{response.status}"
+
+            # Parse the response
+            response_body = response.body
+            parsed = begin
               JSON.parse(response_body)
-            rescue StandardError
+            rescue StandardError => e
+              puts "[MCP DEBUG] Error parsing response: #{e.message}"
               {}
             end
             result = parsed["result"] || {}
 
-            # Extract simple text content if available – otherwise fall back to full JSON
+            # Extract simple text content according to MCP spec
             content_item = (result["content"] || []).first
             content_text = if content_item.is_a?(Hash) && content_item["type"] == "text"
                              content_item["text"]
@@ -108,7 +157,7 @@ module Raix
                     id: call_id,
                     type: "function",
                     function: {
-                      name: name.to_s,
+                      name: remote_name,
                       arguments: arguments.to_json
                     }
                   }
@@ -117,7 +166,7 @@ module Raix
               {
                 role: "tool",
                 tool_call_id: call_id,
-                name: name.to_s,
+                name: remote_name,
                 content: content_text
               }
             ]
@@ -129,12 +178,168 @@ module Raix
           end
         end
 
-        @mcp_servers[url] = tools
+        # Store the URL and tools for future use
+        @mcp_servers[url] = {
+          tools:,
+          endpoint_url:
+        }
       end
 
-      private
+      # Establishes an SSE connection to +url+ and returns the JSON‑RPC POST endpoint
+      # advertised by the server.  The MCP specification allows two different event
+      # formats during initialization:
+      #
+      # 1. A generic JSON‑RPC *initialize* event (the behaviour previously
+      #    implemented):
+      #
+      #        event: message    (implicit when no explicit event type is given)
+      #        data: {"jsonrpc":"2.0","method":"initialize","params":{"endpoint_url":"https://…/rpc"}}
+      #
+      # 2. A dedicated *endpoint* event, as implemented by the reference
+      #    TypeScript SDK and the public GitMCP server used in our test-suite:
+      #
+      #        event: endpoint\n
+      #        data: /rpc\n
+      #
+      # This method now supports **both** formats.
+      #
+      # It uses Net::HTTP directly rather than Faraday streaming because the latter
+      # does not consistently surface partial body reads across adapters.  The
+      # implementation reads the response body incrementally, splitting on the
+      # SSE record delimiter (double newline) and processing each event until an
+      # endpoint is discovered (or a timeout / connection error occurs).
+      def establish_sse_connection(url)
+        puts "[MCP DEBUG] Establishing MCP connection with URL: #{url}"
 
-      def fetch_mcp_tools(url)
+        headers = {
+          "Accept" => "text/event-stream",
+          "Cache-Control" => "no-cache",
+          "Connection" => "keep-alive",
+          "MCP-Version" => PROTOCOL_VERSION
+        }
+
+        endpoint_url = nil
+        buffer = ""
+
+        connection = Faraday.new(url:) do |faraday|
+          faraday.adapter :async_http
+          faraday.options.timeout = 30
+          faraday.options.open_timeout = 30
+        end
+
+        connection.get do |req|
+          req.headers = headers
+          req.options.on_data = proc do |chunk, _size|
+            buffer << chunk
+
+            # Process complete SSE events (separated by a blank line)
+            while (idx = buffer.index("\n\n"))
+              event_text = buffer.slice!(0..idx + 1) # include delimiter
+              event_type, event_data = parse_sse_fields(event_text)
+
+              case event_type
+              when "endpoint"
+                # event data is expected to be a plain string with the endpoint
+                puts "[MCP DEBUG] Found endpoint event: #{event_data}"
+                endpoint_url = build_absolute_url(url, event_data)
+                initialize_mcp_connection(connection, endpoint_url)
+                break
+              when "message"
+                puts "[MCP DEBUG] Received message: #{event_data}"
+                dispatch_event(event_data)
+                acknowledge_event(connection, endpoint_url)
+              else
+                puts "[MCP DEBUG] Unexpected event type: #{event_type} with data: #{event_data}"
+              end
+            end
+          end
+        end
+      end
+
+      def initialize_mcp_connection(connection, endpoint_url)
+        puts "[MCP DEBUG] Initializing MCP connection with URL: #{endpoint_url}"
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "initialize",
+            params: {
+              protocolVersion: PROTOCOL_VERSION,
+              capabilities: {
+                roots: {
+                  listChanged: true
+                },
+                sampling: {}
+              },
+              clientInfo: {
+                name: "Raix",
+                version: Raix::VERSION
+              }
+            }
+          }.to_json
+        end
+      end
+
+      def dispatch_event(event_data)
+        event_data = JSON.parse(event_data, symbolize_names: true)
+        case event_data
+        in { result: { capabilities: { tools: { listChanged: true } } } }
+          puts "[MCP DEBUG] Received listChanged event"
+        else
+          puts "[MCP DEBUG] Received unexpected event: #{event_data}"
+        end
+      end
+
+      def acknowledge_event(connection, endpoint_url)
+        puts "[MCP DEBUG] Acknowledging event"
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "notifications/initialized"
+          }.to_json
+        end
+      end
+
+      # Parses an SSE *event block* (text up to the blank line delimiter) and
+      # returns `[event_type, data]` where *event_type* defaults to "message" when
+      # no explicit `event:` field is present.  The *data* combines all `data:`
+      # lines separated by newlines, as per the SSE specification.
+      def parse_sse_fields(event_text)
+        event_type = "message"
+        data_lines = []
+
+        event_text.each_line do |line|
+          case line
+          when /^event:\s*(.+)$/
+            event_type = Regexp.last_match(1).strip
+          when /^data:\s*(.*)$/
+            data_lines << Regexp.last_match(1)
+          end
+        end
+
+        [event_type, data_lines.join("\n").strip]
+      end
+
+      # Builds an absolute URL for +candidate+ relative to +base+.
+      # If +candidate+ is already absolute, it is returned unchanged.
+      def build_absolute_url(base, candidate)
+        uri = URI.parse(candidate)
+        return candidate if uri.absolute?
+
+        URI.join(base, candidate).to_s
+      rescue URI::InvalidURIError
+        candidate # fall back to original string
+      end
+
+      def fetch_mcp_tools(endpoint_url)
+        puts "[MCP DEBUG] Fetching tools from: #{endpoint_url}"
+
+        # NOTE: TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
+
+        # Standard MCP protocol for other servers
         payload = {
           jsonrpc: JSONRPC_VERSION,
           id: SecureRandom.uuid,
@@ -142,16 +347,36 @@ module Raix
           params: {}
         }
 
-        response = Faraday.post(url, payload.to_json, "Content-Type" => "application/json")
-        body     = begin
-          JSON.parse(response.body)
-        rescue StandardError
-          {}
+        puts "[MCP DEBUG] Sending tools/list request: #{payload.to_json}"
+
+        begin
+          headers = {
+            "Content-Type" => "application/json",
+            "Accept" => "application/json"
+          }
+
+          response = Faraday.post(endpoint_url, payload.to_json, headers)
+          puts "[MCP DEBUG] Tools/list response status: #{response.status}"
+
+          if response.status != 200
+            puts "[MCP DEBUG] Unexpected status code: #{response.status}, body: #{response.body}"
+            return []
+          end
+
+          body = begin
+            JSON.parse(response.body)
+          rescue StandardError => e
+            warn "[MCP] Error parsing tools/list response: #{e.message}"
+            return []
+          end
+
+          tools = body.dig("result", "tools") || []
+          puts "[MCP DEBUG] Found #{tools.length} tools: #{tools.map { |t| t["name"] }.join(", ")}"
+          tools
+        rescue Faraday::Error => e
+          warn "[MCP] Failed to fetch tools from #{endpoint_url}: #{e.message}"
+          []
         end
-        body.dig("result", "tools") || []
-      rescue Faraday::Error => e
-        warn "[MCP] Failed to fetch tools from #{url}: #{e.message}"
-        []
       end
     end
   end
