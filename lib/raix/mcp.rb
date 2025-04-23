@@ -12,11 +12,11 @@
 # conversation history stays consistent.
 
 require "active_support/concern"
+require "active_support/inflector"
 require "securerandom"
 require "faraday"
 require "uri"
 require "json"
-require "async/http/faraday/default"
 
 module Raix
   # Model Context Protocol integration for Raix
@@ -28,8 +28,10 @@ module Raix
   module MCP
     extend ActiveSupport::Concern
 
-    JSONRPC_VERSION = "2.0"
-    PROTOCOL_VERSION = "2024-11-05" # Current supported protocol version
+    JSONRPC_VERSION = "2.0".freeze
+    PROTOCOL_VERSION = "2024-11-05".freeze # Current supported protocol version
+    CONNECTION_TIMEOUT = 10
+    OPEN_TIMEOUT = 30
 
     class_methods do
       # Declare an MCP server by URL.
@@ -50,10 +52,12 @@ module Raix
         return if @mcp_servers.key?(url) # avoid duplicate definitions
 
         # Connect and initialize the SSE endpoint
-        connection = establish_sse_connection(url)
 
-        # Discover remote tools via the negotiated POST endpoint
-        tools = fetch_mcp_tools(connection, endpoint_url)
+        result = Thread::Queue.new
+        Thread.new do
+          establish_sse_connection(url, result:)
+        end
+        tools = result.pop
 
         if tools.empty?
           puts "[MCP DEBUG] No tools found from MCP server at #{url}"
@@ -78,19 +82,9 @@ module Raix
         puts "[MCP DEBUG] FunctionDispatch included in #{name}"
 
         filtered_tools.each do |tool|
-          remote_name  = tool["name"].to_s
-          local_name   = remote_name.to_sym
-
-          # Handle name clash by prefixing domain
-          if method_defined?(local_name) || (functions&.any? { |f| f[:name] == local_name })
-            domain_prefix = begin
-              host = URI.parse(url).host || "mcp"
-              host.gsub(/[^a-zA-Z0-9]/, "_")
-            rescue URI::InvalidURIError
-              "mcp"
-            end
-            local_name = "#{domain_prefix}_#{remote_name}".to_sym
-          end
+          remote_name = tool[:name]
+          # TODO: Revisit later whether this much context is needed in the function name
+          local_name = "#{url.parameterize.underscore}_#{remote_name}".gsub("https_", "").to_sym
 
           description  = tool["description"]
           input_schema = tool["inputSchema"] || {}
@@ -104,47 +98,19 @@ module Raix
           define_method(local_name) do |**arguments|
             arguments ||= {}
 
-            call_id = SecureRandom.uuid[0, 23]
-
-            # Perform JSON‑RPC `tools/call`
-            payload = {
-              jsonrpc: JSONRPC_VERSION,
-              id: call_id,
-              method: "tools/call",
-              params: {
-                name: remote_name,
-                arguments:
-              }
-            }
-
-            # NOTE: TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
-            puts "[MCP DEBUG] Calling tool: #{remote_name} with args: #{arguments.inspect}"
-            # Use proper headers
-            headers = {
-              "Content-Type" => "application/json",
-              "Accept" => "application/json"
-            }
-
-            # Call the real tool via JSON-RPC
-            response = Faraday.post(endpoint_url, payload.to_json, headers)
-            puts "[MCP DEBUG] Tool response status: #{response.status}"
-
-            # Parse the response
-            response_body = response.body
-            parsed = begin
-              JSON.parse(response_body)
-            rescue StandardError => e
-              puts "[MCP DEBUG] Error parsing response: #{e.message}"
-              {}
+            call_id = SecureRandom.uuid
+            result = Thread::Queue.new
+            Thread.new do
+              self.class.establish_sse_connection(url, name: remote_name, arguments:, result:)
             end
-            result = parsed["result"] || {}
 
-            # Extract simple text content according to MCP spec
-            content_item = (result["content"] || []).first
+            content_item = result.pop
+
+            # Decide what to add to the transcript
             content_text = if content_item.is_a?(Hash) && content_item["type"] == "text"
                              content_item["text"]
                            else
-                             result.to_json
+                             content_item.to_json
                            end
 
             # Mirror FunctionDispatch transcript behaviour
@@ -179,10 +145,7 @@ module Raix
         end
 
         # Store the URL and tools for future use
-        @mcp_servers[url] = {
-          tools:,
-          endpoint_url:
-        }
+        @mcp_servers[url] = { tools: }
       end
 
       # Establishes an SSE connection to +url+ and returns the JSON‑RPC POST endpoint
@@ -208,7 +171,7 @@ module Raix
       # implementation reads the response body incrementally, splitting on the
       # SSE record delimiter (double newline) and processing each event until an
       # endpoint is discovered (or a timeout / connection error occurs).
-      def establish_sse_connection(url)
+      def establish_sse_connection(url, name: nil, arguments: {}, result: nil)
         puts "[MCP DEBUG] Establishing MCP connection with URL: #{url}"
 
         headers = {
@@ -222,9 +185,8 @@ module Raix
         buffer = ""
 
         connection = Faraday.new(url:) do |faraday|
-          faraday.adapter :async_http
-          faraday.options.timeout = 30
-          faraday.options.open_timeout = 30
+          faraday.options.timeout = CONNECTION_TIMEOUT
+          faraday.options.open_timeout = OPEN_TIMEOUT
         end
 
         connection.get do |req|
@@ -243,63 +205,14 @@ module Raix
                 puts "[MCP DEBUG] Found endpoint event: #{event_data}"
                 endpoint_url = build_absolute_url(url, event_data)
                 initialize_mcp_connection(connection, endpoint_url)
-                break
               when "message"
                 puts "[MCP DEBUG] Received message: #{event_data}"
-                dispatch_event(event_data)
-                acknowledge_event(connection, endpoint_url)
+                dispatch_event(event_data, connection, endpoint_url, name, arguments, result)
               else
                 puts "[MCP DEBUG] Unexpected event type: #{event_type} with data: #{event_data}"
               end
             end
           end
-        end
-      end
-
-      def initialize_mcp_connection(connection, endpoint_url)
-        puts "[MCP DEBUG] Initializing MCP connection with URL: #{endpoint_url}"
-        connection.post(endpoint_url) do |req|
-          req.headers["Content-Type"] = "application/json"
-          req.body = {
-            jsonrpc: JSONRPC_VERSION,
-            id: SecureRandom.uuid,
-            method: "initialize",
-            params: {
-              protocolVersion: PROTOCOL_VERSION,
-              capabilities: {
-                roots: {
-                  listChanged: true
-                },
-                sampling: {}
-              },
-              clientInfo: {
-                name: "Raix",
-                version: Raix::VERSION
-              }
-            }
-          }.to_json
-        end
-      end
-
-      def dispatch_event(event_data)
-        event_data = JSON.parse(event_data, symbolize_names: true)
-        case event_data
-        in { result: { capabilities: { tools: { listChanged: true } } } }
-          puts "[MCP DEBUG] Received listChanged event"
-        else
-          puts "[MCP DEBUG] Received unexpected event: #{event_data}"
-        end
-      end
-
-      def acknowledge_event(connection, endpoint_url)
-        puts "[MCP DEBUG] Acknowledging event"
-        connection.post(endpoint_url) do |req|
-          req.headers["Content-Type"] = "application/json"
-          req.body = {
-            jsonrpc: JSONRPC_VERSION,
-            id: SecureRandom.uuid,
-            method: "notifications/initialized"
-          }.to_json
         end
       end
 
@@ -334,48 +247,89 @@ module Raix
         candidate # fall back to original string
       end
 
-      def fetch_mcp_tools(endpoint_url)
-        puts "[MCP DEBUG] Fetching tools from: #{endpoint_url}"
+      def initialize_mcp_connection(connection, endpoint_url)
+        puts "[MCP DEBUG] Initializing MCP connection with URL: #{endpoint_url}"
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "initialize",
+            params: {
+              protocolVersion: PROTOCOL_VERSION,
+              capabilities: {
+                roots: {
+                  listChanged: true
+                },
+                sampling: {}
+              },
+              clientInfo: {
+                name: "Raix",
+                version: Raix::VERSION
+              }
+            }
+          }.to_json
+        end
+      end
 
-        # NOTE: TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
-
-        # Standard MCP protocol for other servers
-        payload = {
-          jsonrpc: JSONRPC_VERSION,
-          id: SecureRandom.uuid,
-          method: "tools/list",
-          params: {}
-        }
-
-        puts "[MCP DEBUG] Sending tools/list request: #{payload.to_json}"
-
-        begin
-          headers = {
-            "Content-Type" => "application/json",
-            "Accept" => "application/json"
-          }
-
-          response = Faraday.post(endpoint_url, payload.to_json, headers)
-          puts "[MCP DEBUG] Tools/list response status: #{response.status}"
-
-          if response.status != 200
-            puts "[MCP DEBUG] Unexpected status code: #{response.status}, body: #{response.body}"
-            return []
+      def dispatch_event(event_data, connection, endpoint_url, name, arguments, result)
+        event_data = JSON.parse(event_data, symbolize_names: true)
+        case event_data
+        in { result: { capabilities: { tools: { listChanged: true } } } }
+          puts "[MCP DEBUG] Received listChanged event"
+          acknowledge_event(connection, endpoint_url)
+          fetch_mcp_tools(connection, endpoint_url)
+        in { result: { tools: } }
+          puts "[MCP DEBUG] Received tools event: #{tools}"
+          if name.present?
+            puts "[MCP DEBUG] Calling function: #{name} with params: #{arguments.inspect}"
+            remote_dispatch(connection, endpoint_url, name, arguments)
+          else
+            result << tools # will unblock the pop on the main thread
+            connection.close
           end
+        in { result: { content: } }
+          puts "[MCP DEBUG] Received content event: #{content}"
+          result << content # will unblock the pop on the main thread
+          connection.close
+        else
+          puts "[MCP DEBUG] Received unexpected event: #{event_data}"
+        end
+      end
 
-          body = begin
-            JSON.parse(response.body)
-          rescue StandardError => e
-            warn "[MCP] Error parsing tools/list response: #{e.message}"
-            return []
-          end
+      def remote_dispatch(connection, endpoint_url, name, arguments)
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "tools/call",
+            params: { name:, arguments: }
+          }.to_json
+        end
+      end
 
-          tools = body.dig("result", "tools") || []
-          puts "[MCP DEBUG] Found #{tools.length} tools: #{tools.map { |t| t["name"] }.join(", ")}"
-          tools
-        rescue Faraday::Error => e
-          warn "[MCP] Failed to fetch tools from #{endpoint_url}: #{e.message}"
-          []
+      def acknowledge_event(connection, endpoint_url)
+        puts "[MCP DEBUG] Acknowledging event"
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            method: "notifications/initialized"
+          }.to_json
+        end
+      end
+
+      def fetch_mcp_tools(connection, endpoint_url)
+        puts "[MCP DEBUG] Fetching tools"
+        connection.post(endpoint_url) do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "tools/list",
+            params: {}
+          }.to_json
         end
       end
     end

@@ -36,7 +36,7 @@ Metrics/PerceivedComplexity:
 Metrics/ParameterLists:
   Enabled: false
 
-Style/FrozenLiteralComment:
+Style/FrozenStringLiteralComment:
   Enabled: false
 
 Style/MultilineBlockChain:

@@ -452,6 +452,50 @@ question.ask("Any question")
 # => RuntimeError: Please define a yes and/or no block
 ```
 
+## Model Context Protocol (Experimental)
+
+The `Raix::MCP` module provides integration with the Model Context Protocol, allowing you to connect your Raix-powered application to remote MCP servers. This feature is currently **experimental**.
+
+### Usage
+
+Include the `Raix::MCP` module in your class and declare MCP servers using the `mcp` DSL:
+
+```ruby
+class McpConsumer
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+  include Raix::MCP
+
+  mcp "https://your-mcp-server.example.com/sse"
+end
+```
+
+### Features
+
+- Automatically fetches available tools from the remote MCP server using `tools/list`
+- Registers remote tools as OpenAI-compatible function schemas
+- Defines proxy methods that forward requests to the remote server via `tools/call`
+- Seamlessly integrates with the existing `FunctionDispatch` workflow
+- Handles transcript recording to maintain consistent conversation history
+
+### Filtering Tools
+
+You can filter which remote tools to include:
+
+```ruby
+class FilteredMcpConsumer
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+  include Raix::MCP
+
+  # Only include specific tools
+  mcp "https://server.example.com/sse", only: [:tool_one, :tool_two]
+
+  # Or exclude specific tools
+  mcp "https://server.example.com/sse", except: [:tool_to_exclude]
+end
+```
+
 ## Response Format (Experimental)
 
 The `ResponseFormat` class provides a way to declare a JSON schema for the response format of an AI chat completion. It's particularly useful when you need structured responses from AI models, ensuring the output conforms to your application's requirements.

@@ -1,6 +1,6 @@
-## [0.8.0] - 2025-05-08
+## [0.8.0] - 2024-05-08
 ### Added
-* **MCP integration** — new `Raix::MCP` concern and `mcp` DSL for declaring remote MCP servers.
+* **MCP integration (Experimental)** — new `Raix::MCP` concern and `mcp` DSL for declaring remote MCP servers.
   * Automatically fetches `tools/list`, registers remote tools as OpenAI‑compatible function schemas, and defines proxy methods that forward `tools/call`.
   * `ChatCompletion#tools` now returns remote MCP tools alongside local `function` declarations.
 
