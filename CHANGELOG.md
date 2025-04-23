@@ -1,12 +1,14 @@
-## [0.7.2] - 2024-04-19
+## [0.7.3] - 2025-04-23
+
+## [0.7.2] - 2025-04-19
 - adds support for `messages` parameter in `chat_completion` to override the transcript
 - fixes potential race conditions in parallel chat completion calls by duplicating transcript
 
-## [0.7.1] - 2024-04-10
+## [0.7.1] - 2025-04-10
 - adds support for JSON response format with automatic parsing
 - improves error handling for JSON parsing failures
 
-## [0.7] - 2024-04-02
+## [0.7] - 2025-04-02
 - adds support for `until` condition in `PromptDeclarations` to control prompt looping
 - adds support for `if` and `unless` conditions in `PromptDeclarations` to control prompt execution
 - adds support for `success` callback in `PromptDeclarations` to handle prompt responses
