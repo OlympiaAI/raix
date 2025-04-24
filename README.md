@@ -134,6 +134,41 @@ end
 
 Note that for security reasons, dispatching functions only works with functions implemented using `Raix::FunctionDispatch#function` or directly on the class.
 
+#### Tool Filtering
+
+You can control which tools are available to the AI on a given chat completion request using the `tools` parameter in the `chat_completion` method:
+
+```ruby
+class WeatherAndTime
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :check_weather, "Check the weather for a location", location: { type: "string" } do |arguments|
+    "The weather in #{arguments[:location]} is sunny"
+  end
+
+  function :get_time, "Get the current time" do |_arguments|
+    "The time is 12:00 PM"
+  end
+end
+
+weather = WeatherAndTime.new
+
+# Don't pass any tools to the LLM
+weather.chat_completion(tools: false)
+
+# Only pass specific tools to the LLM
+weather.chat_completion(tools: [:check_weather])
+
+# Pass all declared tools (default behavior)
+weather.chat_completion
+```
+
+The `tools` parameter accepts three types of values:
+- `false`: No tools are passed to the LLM
+- An array of symbols: Only the specified tools are passed (raises `Raix::UndeclaredToolError` if any tool is not declared)
+- Not provided: All declared tools are passed (default behavior)
+
 #### Multiple Tool Calls
 
 Some AI models (like GPT-4) can make multiple tool calls in a single response. When this happens, Raix will automatically handle all the function calls sequentially.
