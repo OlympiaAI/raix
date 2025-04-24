@@ -94,10 +94,7 @@ module Raix
     end
 
     def chat_completion(**chat_completion_args)
-      raise "No functions defined" if self.class.functions.blank?
-
       self.chat_completion_args = chat_completion_args
-
       super
     end
 
@@ -109,6 +106,8 @@ module Raix
     end
 
     def tools
+      return [] unless self.class.functions
+
       self.class.functions.map { |function| { type: "function", function: } }
     end
   end

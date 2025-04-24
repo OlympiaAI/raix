@@ -9,6 +9,8 @@ require "openai"
 require_relative "message_adapters/base"
 
 module Raix
+  class UndeclaredToolError < StandardError; end
+
   # The `ChatCompletion`` module is a Rails concern that provides a way to interact
   # with the OpenRouter Chat Completion API via its client. The module includes a few
   # methods that allow you to build a transcript of messages and then send them to
@@ -44,8 +46,9 @@ module Raix
     # @option params [Boolean] :openai (false) Whether to use OpenAI's API instead of OpenRouter's.
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @option params [Array] :messages (nil) An array of messages to use instead of the transcript.
+    # @option tools [Array|false] :tools (nil) Tools to pass to the LLM. If false, no tools are passed. If an array, only declared tools in the array are passed.
     # @return [String|Hash] The completed chat response.
-    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil)
+    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil, tools: nil)
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
@@ -63,7 +66,13 @@ module Raix
       params[:stop] ||= stop.presence
       params[:temperature] ||= temperature.presence || Raix.configuration.temperature
       params[:tool_choice] ||= tool_choice.presence
-      params[:tools] ||= tools.presence
+      params[:tools] = if tools == false
+                         nil
+                       elsif tools.is_a?(Array)
+                         filtered_tools(tools)
+                       else
+                         self.tools.presence
+                       end
       params[:top_a] ||= top_a.presence
       params[:top_k] ||= top_k.presence
       params[:top_logprobs] ||= top_logprobs.presence
@@ -181,6 +190,18 @@ module Raix
     end
 
     private
+
+    def filtered_tools(tool_names)
+      return nil if tool_names.blank?
+
+      requested_tools = tool_names.map(&:to_sym)
+      available_tool_names = tools.map { |tool| tool.dig(:function, :name).to_sym }
+
+      undeclared_tools = requested_tools - available_tool_names
+      raise UndeclaredToolError, "Undeclared tools: #{undeclared_tools.join(", ")}" if undeclared_tools.any?
+
+      tools.select { |tool| requested_tools.include?(tool.dig(:function, :name).to_sym) }
+    end
 
     def openai_request(params:, model:, messages:)
       if params[:prediction]

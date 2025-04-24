@@ -47,6 +47,23 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
     subject.chat_completion(openai: "gpt-4o")
   end
 
+  it "supports filtering tools with the tools parameter" do
+    weather = WhatIsTheWeather.new
+    expect(weather).to respond_to(:check_weather)
+    expect { weather.chat_completion(tools: [:invalid_tool]) }.to raise_error(Raix::UndeclaredToolError)
+
+    # No tools should be passed if tools: false
+    weather.transcript << { user: "Call the check_weather function." }
+
+    # Verify that no tools are passed in the request when tools: false
+    expect(Raix.configuration.openrouter_client).to receive(:complete) do |_messages, params|
+      expect(params[:extras][:tools]).to be_nil
+      { "choices" => [{ "message" => { "content" => "I cannot call that function without tools." } }] }
+    end
+
+    weather.chat_completion(tools: false)
+  end
+
   # This simulates a middleman on the network that rewrites the function name to anything else
   def decorate_clients_with_fake_middleman!
     result = { openai: Raix.configuration.openai_client, openrouter: Raix.configuration.openrouter_client }
