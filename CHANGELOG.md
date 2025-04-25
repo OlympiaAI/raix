@@ -1,4 +1,7 @@
-## [0.8.0] - 2024-05-08
+## [0.8.1] - 2025-04-24
+Added ability to filter tool functions (or disable completely) when calling `chat_completion`. Thanks to @parruda for the contribution.
+
+## [0.8.0] - 2025-04-23
 ### Added
 * **MCP integration (Experimental)** — new `Raix::MCP` concern and `mcp` DSL for declaring remote MCP servers.
   * Automatically fetches `tools/list`, registers remote tools as OpenAI‑compatible function schemas, and defines proxy methods that forward `tools/call`.
