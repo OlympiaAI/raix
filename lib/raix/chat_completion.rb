@@ -132,7 +132,7 @@ module Raix
             function_name = tool_call["function"]["name"]
             raise "Unauthorized function call: #{function_name}" unless self.class.functions.map { |f| f[:name].to_sym }.include?(function_name.to_sym)
 
-            send(function_name, arguments.with_indifferent_access)
+            dispatch_tool_function(function_name, arguments.with_indifferent_access)
           end
         end
 
@@ -187,6 +187,16 @@ module Raix
     # @return [Array] The transcript array.
     def transcript
       @transcript ||= []
+    end
+
+    # Dispatches a tool function call with the given function name and arguments.
+    # This method can be overridden in subclasses to customize how function calls are handled.
+    #
+    # @param function_name [String] The name of the function to call
+    # @param arguments [Hash] The arguments to pass to the function
+    # @return [Object] The result of the function call
+    def dispatch_tool_function(function_name, arguments)
+      public_send(function_name, arguments)
     end
 
     private

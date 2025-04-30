@@ -206,6 +206,28 @@ example.invocations
 # => [:first, :second]
 ```
 
+#### Customizing Function Dispatch
+
+You can customize how function calls are handled by overriding the `dispatch_tool_function` in your class. This is useful if you need to add logging, caching, error handling, or other custom behavior around function calls.
+
+```ruby
+class CustomDispatchExample
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :example_tool do |arguments|
+    "Result from example tool"
+  end
+
+  def dispatch_tool_function(function_name, arguments)
+    puts "Calling #{function_name} with #{arguments}"
+    result = super
+    puts "Result: #{result}"
+    result
+  end
+end
+```
+
 #### Manually Stopping a Loop
 
 To loop AI components that don't interact with end users, at least one function block should invoke `stop_looping!` whenever you're ready to stop processing.

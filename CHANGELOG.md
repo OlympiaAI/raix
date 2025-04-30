@@ -1,3 +1,7 @@
+## [0.8.2] - 2025-04-29
+- Extracts function call dispatch into a public `dispatch_tool_function` that can be overridden in subclasses
+- Uses `public_send` instead of `send` for better security and explicitness
+
 ## [0.8.1] - 2025-04-24
 Added ability to filter tool functions (or disable completely) when calling `chat_completion`. Thanks to @parruda for the contribution.
 
