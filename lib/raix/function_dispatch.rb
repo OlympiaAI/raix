@@ -54,35 +54,41 @@ module Raix
           end
         end
 
-        define_method(name) do |arguments|
+        define_method(name) do |arguments, cache|
           id = SecureRandom.uuid[0, 23]
-          instance_exec(arguments, &block).tap do |content|
-            # add in one operation to prevent race condition and potential wrong
-            # interleaving of tool calls in multi-threaded environments
-            transcript << [
-              {
-                role: "assistant",
-                content: nil,
-                tool_calls: [
-                  {
-                    id:,
-                    type: "function",
-                    function: {
-                      name:,
-                      arguments: arguments.to_json
-                    }
+
+          content = if cache.present?
+                      cache.fetch([name, arguments]) do
+                        instance_exec(arguments, &block)
+                      end
+                    else
+                      instance_exec(arguments, &block)
+                    end
+
+          # add in one operation to prevent race condition and potential wrong
+          # interleaving of tool calls in multi-threaded environments
+          transcript << [
+            {
+              role: "assistant",
+              content: nil,
+              tool_calls: [
+                {
+                  id:,
+                  type: "function",
+                  function: {
+                    name:,
+                    arguments: arguments.to_json
                   }
-                ]
-              },
-              {
-                role: "tool",
-                tool_call_id: id,
-                name:,
-                content: content.to_s
-              }
-            ]
-            # TODO: add on_error handler as optional parameter to function
-          end
+                }
+              ]
+            },
+            {
+              role: "tool",
+              tool_call_id: id,
+              name:,
+              content: content.to_s
+            }
+          ]
 
           chat_completion(**chat_completion_args) if loop
         end

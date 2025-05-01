@@ -1,3 +1,6 @@
+## [0.8.3] - 2025-04-30
+- Adds optional ActiveSupport Cache parameter to `dispatch_tool_function` for caching tool calls
+
 ## [0.8.2] - 2025-04-29
 - Extracts function call dispatch into a public `dispatch_tool_function` that can be overridden in subclasses
 - Uses `public_send` instead of `send` for better security and explicitness

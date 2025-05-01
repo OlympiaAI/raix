@@ -194,9 +194,10 @@ module Raix
     #
     # @param function_name [String] The name of the function to call
     # @param arguments [Hash] The arguments to pass to the function
+    # @param cache [ActiveSupport::Cache] Optional cache object
     # @return [Object] The result of the function call
-    def dispatch_tool_function(function_name, arguments)
-      public_send(function_name, arguments)
+    def dispatch_tool_function(function_name, arguments, cache: nil)
+      public_send(function_name, arguments, cache)
     end
 
     private

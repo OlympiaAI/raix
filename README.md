@@ -226,7 +226,38 @@ class CustomDispatchExample
     result
   end
 end
+
+#### Function Call Caching
+
+You can use ActiveSupport's Cache to cache function call results, which can be particularly useful for expensive operations or external API calls that don't need to be repeated frequently.
+
+```ruby
+class CachedFunctionExample
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :expensive_operation do |arguments|
+    "Result of expensive operation with #{arguments}"
+  end
+  
+  # Override dispatch_tool_function to enable caching for all functions
+  def dispatch_tool_function(function_name, arguments)
+    # Pass the cache to the superclass implementation
+    super(function_name, arguments, cache: Rails.cache)
+  end
+end
 ```
+
+The caching mechanism works by:
+1. Passing the cache object through `dispatch_tool_function` to the function implementation
+2. Using the function name and arguments as cache keys
+3. Automatically fetching from cache when available or executing the function when not cached
+
+This is particularly useful for:
+- Expensive database operations
+- External API calls
+- Resource-intensive computations
+- Functions with deterministic outputs for the same inputs
 
 #### Manually Stopping a Loop
 

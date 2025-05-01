@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    raix (0.8.2)
+    raix (0.8.3)
       activesupport (>= 6.0)
       faraday-retry (~> 2.0)
       open_router (~> 0.2)
