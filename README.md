@@ -226,6 +226,7 @@ class CustomDispatchExample
     result
   end
 end
+```
 
 #### Function Call Caching
 
@@ -239,7 +240,7 @@ class CachedFunctionExample
   function :expensive_operation do |arguments|
     "Result of expensive operation with #{arguments}"
   end
-  
+
   # Override dispatch_tool_function to enable caching for all functions
   def dispatch_tool_function(function_name, arguments)
     # Pass the cache to the superclass implementation
