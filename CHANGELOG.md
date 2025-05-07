@@ -1,3 +1,6 @@
+## [0.8.4] - 2025-05-07
+- Calls strip instead of squish on response of chat_completion in order to not clobber linebreaks
+
 ## [0.8.3] - 2025-04-30
 - Adds optional ActiveSupport Cache parameter to `dispatch_tool_function` for caching tool calls
 
