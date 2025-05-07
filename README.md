@@ -165,6 +165,7 @@ weather.chat_completion
 ```
 
 The `tools` parameter accepts three types of values:
+
 - `false`: No tools are passed to the LLM
 - An array of symbols: Only the specified tools are passed (raises `Raix::UndeclaredToolError` if any tool is not declared)
 - Not provided: All declared tools are passed (default behavior)
@@ -250,11 +251,13 @@ end
 ```
 
 The caching mechanism works by:
+
 1. Passing the cache object through `dispatch_tool_function` to the function implementation
 2. Using the function name and arguments as cache keys
 3. Automatically fetching from cache when available or executing the function when not cached
 
 This is particularly useful for:
+
 - Expensive database operations
 - External API calls
 - Resource-intensive computations
@@ -556,6 +559,19 @@ class McpConsumer
   include Raix::MCP
 
   mcp "https://your-mcp-server.example.com/sse"
+end
+```
+
+By default, Raix uses Server-Sent Events (SSE) for MCP communication. You can explicitly specify the protocol using the `:protocol` option. This is useful if your MCP server supports HTTP long polling or other mechanisms instead of SSE.
+
+```ruby
+class HttpMcpConsumer
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+  include Raix::MCP
+
+  # Use HTTP for MCP communication
+  mcp "https://your-mcp-server.example.com/api", protocol: :http
 end
 ```
 

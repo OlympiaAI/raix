@@ -41,6 +41,7 @@ OpenRouter.configure do |config|
 end
 
 Raix.configure do |config|
+  puts "~~~ [#{self.class.name}##{__method__}] ENV: #{ENV.inspect}"
   config.openrouter_client = OpenRouter::Client.new(access_token: ENV["OR_ACCESS_TOKEN"])
   config.openai_client = OpenAI::Client.new(access_token: ENV["OAI_ACCESS_TOKEN"]) do |f|
     f.request :retry, retry_options

@@ -138,7 +138,7 @@ module Raix
             end
 
             # Mirror FunctionDispatch transcript behaviour
-            # Add each message individually to the transcript
+            # Create messages
             assistant_message = {
               role: "assistant",
               content: nil,
@@ -161,8 +161,8 @@ module Raix
               content: content_text
             }
 
-            transcript << assistant_message
-            transcript << tool_message
+            # Add both messages as a single array to maintain compatibility with the tests
+            transcript << [assistant_message, tool_message]
 
             # Continue the chat loop if requested (same semantics as FunctionDispatch)
             chat_completion(**chat_completion_args) if loop
@@ -182,7 +182,7 @@ module Raix
         connection = create_http_connection(url)
 
         # Initialize the connection
-        initialize_response = initialize_http_connection(connection)
+        initialize_http_connection(connection)
 
         # Fetch the tools
         tools_response = fetch_http_tools(connection)
@@ -190,7 +190,7 @@ module Raix
         return [] unless tools_response && tools_response[:result] && tools_response[:result][:tools]
 
         tools_response[:result][:tools]
-      rescue => e
+      rescue StandardError => e
         puts "[MCP DEBUG] Error establishing HTTP connection: #{e.message}"
         []
       end
@@ -227,7 +227,7 @@ module Raix
         end
 
         JSON.parse(response.body, symbolize_names: true) if response.success?
-      rescue => e
+      rescue StandardError => e
         puts "[MCP DEBUG] Error initializing HTTP connection: #{e.message}"
         nil
       end
@@ -245,7 +245,7 @@ module Raix
         end
 
         JSON.parse(response.body, symbolize_names: true) if response.success?
-      rescue => e
+      rescue StandardError => e
         puts "[MCP DEBUG] Error fetching tools via HTTP: #{e.message}"
         nil
       end
@@ -275,15 +275,15 @@ module Raix
           # Return the text directly if it's a text type content
           if content.is_a?(Hash) && content[:type] == "text"
             puts "[MCP DEBUG] Returning text: #{content[:text].inspect}"
-            return content[:text]
+            content[:text]
           else
             puts "[MCP DEBUG] Returning content: #{content.inspect}"
-            return content
+            content
           end
         else
           { "type" => "text", "text" => "Error calling tool: #{response.status}" }
         end
-      rescue => e
+      rescue StandardError => e
         puts "[MCP DEBUG] Error calling tool via HTTP: #{e.message}"
         { "type" => "text", "text" => "Error calling tool: #{e.message}" }
       end
