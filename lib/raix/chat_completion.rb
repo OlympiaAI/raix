@@ -140,7 +140,7 @@ module Raix
           content = res.dig("choices", 0, "message", "content")
 
           transcript << { assistant: content } if save_response
-          content = content.squish
+          content = content.strip
 
           if json
             # Make automatic JSON parsing available to non-OpenAI providers that don't support the response_format parameter
