@@ -3,6 +3,10 @@
 #
 #   mcp "https://my-server.example.com/sse"
 #
+# Or with HTTP protocol:
+#
+#   mcp "https://my-server.example.com/api", protocol: :http
+#
 # The concern fetches the remote server's tool list (via JSON‑RPC 2.0
 # `tools/list`) and exposes each remote tool as if it were an inline
 # `function` declared with Raix::FunctionDispatch.  When the tool is
@@ -38,6 +42,10 @@ module Raix
       #
       #   mcp "https://server.example.com/sse"
       #
+      # Or with HTTP protocol:
+      #
+      #   mcp "https://server.example.com/api", protocol: :http
+      #
       # This will automatically:
       #   • query `tools/list` on the server
       #   • register each remote tool with FunctionDispatch so that the
@@ -46,18 +54,27 @@ module Raix
       #     call to the server and appends the proper messages to the
       #     transcript.
       # NOTE TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
-      def mcp(url, only: nil, except: nil)
+      def mcp(url, only: nil, except: nil, protocol: :sse)
         @mcp_servers ||= {}
 
         return if @mcp_servers.key?(url) # avoid duplicate definitions
 
-        # Connect and initialize the SSE endpoint
+        # Connect and initialize based on the protocol
+        tools = []
 
-        result = Thread::Queue.new
-        Thread.new do
-          establish_sse_connection(url, result:)
+        if protocol == :sse
+          # Use existing SSE connection logic
+          result = Thread::Queue.new
+          Thread.new do
+            establish_sse_connection(url, result:)
+          end
+          tools = result.pop
+        elsif protocol == :http
+          # Use new HTTP connection logic
+          tools = establish_http_connection(url)
+        else
+          raise ArgumentError, "Unsupported protocol: #{protocol}. Must be :sse or :http"
         end
-        tools = result.pop
 
         if tools.empty?
           puts "[MCP DEBUG] No tools found from MCP server at #{url}"
@@ -99,43 +116,53 @@ module Raix
             arguments ||= {}
 
             call_id = SecureRandom.uuid
-            result = Thread::Queue.new
-            Thread.new do
-              self.class.establish_sse_connection(url, name: remote_name, arguments:, result:)
+            content_text = ""
+
+            if protocol == :sse
+              result = Thread::Queue.new
+              Thread.new do
+                self.class.establish_sse_connection(url, name: remote_name, arguments:, result:)
+              end
+
+              content_item = result.pop
+
+              # Decide what to add to the transcript
+              content_text = if content_item.is_a?(Hash) && content_item["type"] == "text"
+                               content_item["text"]
+                             else
+                               content_item.to_json
+                             end
+            elsif protocol == :http
+              # HTTP method now returns the properly formatted content directly
+              content_text = self.class.http_call_tool(url, remote_name, arguments)
             end
 
-            content_item = result.pop
-
-            # Decide what to add to the transcript
-            content_text = if content_item.is_a?(Hash) && content_item["type"] == "text"
-                             content_item["text"]
-                           else
-                             content_item.to_json
-                           end
-
             # Mirror FunctionDispatch transcript behaviour
-            transcript << [
-              {
-                role: "assistant",
-                content: nil,
-                tool_calls: [
-                  {
-                    id: call_id,
-                    type: "function",
-                    function: {
-                      name: remote_name,
-                      arguments: arguments.to_json
-                    }
+            # Add each message individually to the transcript
+            assistant_message = {
+              role: "assistant",
+              content: nil,
+              tool_calls: [
+                {
+                  id: call_id,
+                  type: "function",
+                  function: {
+                    name: remote_name,
+                    arguments: arguments.to_json
                   }
-                ]
-              },
-              {
-                role: "tool",
-                tool_call_id: call_id,
-                name: remote_name,
-                content: content_text
-              }
-            ]
+                }
+              ]
+            }
+
+            tool_message = {
+              role: "tool",
+              tool_call_id: call_id,
+              name: remote_name,
+              content: content_text
+            }
+
+            transcript << assistant_message
+            transcript << tool_message
 
             # Continue the chat loop if requested (same semantics as FunctionDispatch)
             chat_completion(**chat_completion_args) if loop
@@ -145,7 +172,120 @@ module Raix
         end
 
         # Store the URL and tools for future use
-        @mcp_servers[url] = { tools: }
+        @mcp_servers[url] = { tools:, protocol: }
+      end
+
+      # HTTP implementation for MCP
+      def establish_http_connection(url)
+        puts "[MCP DEBUG] Establishing HTTP MCP connection with URL: #{url}"
+
+        connection = create_http_connection(url)
+
+        # Initialize the connection
+        initialize_response = initialize_http_connection(connection)
+
+        # Fetch the tools
+        tools_response = fetch_http_tools(connection)
+
+        return [] unless tools_response && tools_response[:result] && tools_response[:result][:tools]
+
+        tools_response[:result][:tools]
+      rescue => e
+        puts "[MCP DEBUG] Error establishing HTTP connection: #{e.message}"
+        []
+      end
+
+      def create_http_connection(url)
+        Faraday.new(url:) do |faraday|
+          faraday.options.timeout = CONNECTION_TIMEOUT
+          faraday.options.open_timeout = OPEN_TIMEOUT
+        end
+      end
+
+      def initialize_http_connection(connection)
+        response = connection.post do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.headers["MCP-Version"] = PROTOCOL_VERSION
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "initialize",
+            params: {
+              protocolVersion: PROTOCOL_VERSION,
+              capabilities: {
+                roots: {
+                  listChanged: true
+                },
+                sampling: {}
+              },
+              clientInfo: {
+                name: "Raix",
+                version: Raix::VERSION
+              }
+            }
+          }.to_json
+        end
+
+        JSON.parse(response.body, symbolize_names: true) if response.success?
+      rescue => e
+        puts "[MCP DEBUG] Error initializing HTTP connection: #{e.message}"
+        nil
+      end
+
+      def fetch_http_tools(connection)
+        response = connection.post do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.headers["MCP-Version"] = PROTOCOL_VERSION
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "tools/list",
+            params: {}
+          }.to_json
+        end
+
+        JSON.parse(response.body, symbolize_names: true) if response.success?
+      rescue => e
+        puts "[MCP DEBUG] Error fetching tools via HTTP: #{e.message}"
+        nil
+      end
+
+      def http_call_tool(url, name, arguments)
+        puts "[MCP DEBUG] Calling tool via HTTP: #{name} with arguments: #{arguments.inspect}"
+
+        connection = create_http_connection(url)
+
+        response = connection.post do |req|
+          req.headers["Content-Type"] = "application/json"
+          req.headers["MCP-Version"] = PROTOCOL_VERSION
+          req.body = {
+            jsonrpc: JSONRPC_VERSION,
+            id: SecureRandom.uuid,
+            method: "tools/call",
+            params: { name:, arguments: }
+          }.to_json
+        end
+
+        if response.success?
+          result = JSON.parse(response.body, symbolize_names: true)
+          content = result[:result][:content]
+
+          puts "[MCP DEBUG] Response content: #{content.inspect}"
+
+          # Return the text directly if it's a text type content
+          if content.is_a?(Hash) && content[:type] == "text"
+            puts "[MCP DEBUG] Returning text: #{content[:text].inspect}"
+            return content[:text]
+          else
+            puts "[MCP DEBUG] Returning content: #{content.inspect}"
+            return content
+          end
+        else
+          { "type" => "text", "text" => "Error calling tool: #{response.status}" }
+        end
+      rescue => e
+        puts "[MCP DEBUG] Error calling tool via HTTP: #{e.message}"
+        { "type" => "text", "text" => "Error calling tool: #{e.message}" }
       end
 
       # Establishes an SSE connection to +url+ and returns the JSON‑RPC POST endpoint
