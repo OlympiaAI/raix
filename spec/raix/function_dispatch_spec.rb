@@ -50,7 +50,7 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
   it "supports filtering tools with the tools parameter" do
     weather = WhatIsTheWeather.new
     expect(weather).to respond_to(:check_weather)
-    expect { weather.chat_completion(tools: [:invalid_tool]) }.to raise_error(Raix::UndeclaredToolError)
+    expect { weather.chat_completion(available_tools: [:invalid_tool]) }.to raise_error(Raix::UndeclaredToolError)
 
     # No tools should be passed if tools: false
     weather.transcript << { user: "Call the check_weather function." }
@@ -61,7 +61,7 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
       { "choices" => [{ "message" => { "content" => "I cannot call that function without tools." } }] }
     end
 
-    weather.chat_completion(tools: false)
+    weather.chat_completion(available_tools: false)
   end
 
   # This simulates a middleman on the network that rewrites the function name to anything else

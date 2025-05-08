@@ -136,7 +136,7 @@ Note that for security reasons, dispatching functions only works with functions 
 
 #### Tool Filtering
 
-You can control which tools are available to the AI on a given chat completion request using the `tools` parameter in the `chat_completion` method:
+You can control which tool functions are exposed to the AI per request using the `available_tools` parameter of the `chat_completion` method:
 
 ```ruby
 class WeatherAndTime
@@ -155,19 +155,19 @@ end
 weather = WeatherAndTime.new
 
 # Don't pass any tools to the LLM
-weather.chat_completion(tools: false)
+weather.chat_completion(available_tools: false)
 
 # Only pass specific tools to the LLM
-weather.chat_completion(tools: [:check_weather])
+weather.chat_completion(available_tools: [:check_weather])
 
 # Pass all declared tools (default behavior)
 weather.chat_completion
 ```
 
-The `tools` parameter accepts three types of values:
+The `available_tools` parameter accepts three types of values:
+- `nil`: All declared tool functions are passed (default behavior)
 - `false`: No tools are passed to the LLM
-- An array of symbols: Only the specified tools are passed (raises `Raix::UndeclaredToolError` if any tool is not declared)
-- Not provided: All declared tools are passed (default behavior)
+- An array of symbols: Only the specified tools are passed (raises `Raix::UndeclaredToolError` if a specified tool function is not declared)
 
 #### Multiple Tool Calls
 

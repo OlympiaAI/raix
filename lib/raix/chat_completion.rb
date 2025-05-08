@@ -36,7 +36,7 @@ module Raix
 
     attr_accessor :cache_at, :frequency_penalty, :logit_bias, :logprobs, :loop, :min_p, :model, :presence_penalty,
                   :prediction, :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
-                  :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :tool_choice, :provider
+                  :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :available_tools, :tool_choice, :provider
 
     # This method performs chat completion based on the provided transcript and parameters.
     #
@@ -46,9 +46,9 @@ module Raix
     # @option params [Boolean] :openai (false) Whether to use OpenAI's API instead of OpenRouter's.
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @option params [Array] :messages (nil) An array of messages to use instead of the transcript.
-    # @option tools [Array|false] :tools (nil) Tools to pass to the LLM. If false, no tools are passed. If an array, only declared tools in the array are passed.
+    # @option tools [Array|false] :available_tools (nil) Tools to pass to the LLM. Ignored if nil (default). If false, no tools are passed. If an array, only declared tools in the array are passed.
     # @return [String|Hash] The completed chat response.
-    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil, tools: nil)
+    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil, available_tools: nil)
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
@@ -66,12 +66,12 @@ module Raix
       params[:stop] ||= stop.presence
       params[:temperature] ||= temperature.presence || Raix.configuration.temperature
       params[:tool_choice] ||= tool_choice.presence
-      params[:tools] = if tools == false
+      params[:tools] = if available_tools == false
                          nil
-                       elsif tools.is_a?(Array)
-                         filtered_tools(tools)
+                       elsif available_tools.is_a?(Array)
+                         filtered_tools(available_tools)
                        else
-                         self.tools.presence
+                         tools.presence
                        end
       params[:top_a] ||= top_a.presence
       params[:top_k] ||= top_k.presence

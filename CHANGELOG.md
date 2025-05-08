@@ -1,3 +1,6 @@
+## [0.8.5] - 2025-05-08
+- renamed `tools` argument to `chat_completion` to `available_tools` to prevent shadowing the existing tool attribute (potentially breaking change to enhancement introduced in 0.8.1)
+
 ## [0.8.4] - 2025-05-07
 - Calls strip instead of squish on response of chat_completion in order to not clobber linebreaks
 
