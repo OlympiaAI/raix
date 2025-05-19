@@ -116,7 +116,9 @@ class WhatIsTheWeather
   include Raix::ChatCompletion
   include Raix::FunctionDispatch
 
-  function :check_weather, "Check the weather for a location", location: { type: "string" } do |arguments|
+  function :check_weather,
+           "Check the weather for a location",
+           location: { type: "string", required: true } do |arguments|
     "The weather in #{arguments[:location]} is hot and sunny"
   end
 end
@@ -131,6 +133,8 @@ RSpec.describe WhatIsTheWeather do
   end
 end
 ```
+
+Parameters are optional by default. Mark them as required with `required: true` or explicitly optional with `optional: true`.
 
 Note that for security reasons, dispatching functions only works with functions implemented using `Raix::FunctionDispatch#function` or directly on the class.
 
