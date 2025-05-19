@@ -32,6 +32,18 @@ class MultipleToolCalls
   end
 end
 
+class SearchForFile
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  function :search_for_file,
+           "Search for a file in the project",
+           glob_pattern: { type: "string", required: true },
+           path: { type: "string", optional: true } do |_arguments|
+    "found"
+  end
+end
+
 RSpec.describe Raix::FunctionDispatch, :vcr do
   let(:callback) { double("callback") }
 
@@ -62,6 +74,13 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
     end
 
     weather.chat_completion(available_tools: false)
+  end
+
+  it "tracks required and optional parameters" do
+    params = SearchForFile.new.tools.first[:function][:parameters]
+    expect(params[:required]).to eq([:glob_pattern])
+    expect(params[:properties].keys).to include(:path)
+    expect(params[:required]).not_to include(:path)
   end
 
   # This simulates a middleman on the network that rewrites the function name to anything else

@@ -1,3 +1,6 @@
+## [0.8.6] - 2025-05-19
+- add `required` and `optional` flags for parameters in `function` declarations
+
 ## [0.8.5] - 2025-05-08
 - renamed `tools` argument to `chat_completion` to `available_tools` to prevent shadowing the existing tool attribute (potentially breaking change to enhancement introduced in 0.8.1)
 

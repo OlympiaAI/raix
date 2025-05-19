@@ -46,11 +46,21 @@ module Raix
       def function(name, description = nil, **parameters, &block)
         @functions ||= []
         @functions << begin
-          { name:, parameters: { type: "object", properties: {} } }.tap do |definition|
+          {
+            name:,
+            parameters: { type: "object", properties: {}, required: [] }
+          }.tap do |definition|
             definition[:description] = description if description.present?
-            parameters.map do |key, value|
+            parameters.each do |key, value|
+              value = value.dup
+              required = value.delete(:required)
+              optional = value.delete(:optional)
               definition[:parameters][:properties][key] = value
+              if required || optional == false
+                definition[:parameters][:required] << key
+              end
             end
+            definition[:parameters].delete(:required) if definition[:parameters][:required].empty?
           end
         end
 
