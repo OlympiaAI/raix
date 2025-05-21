@@ -44,6 +44,10 @@ module Raix
       self.max_tokens = DEFAULT_MAX_TOKENS
       self.model = DEFAULT_MODEL
     end
+
+    def client?
+      !!(openrouter_client || openai_client)
+    end
   end
 
   class << self
