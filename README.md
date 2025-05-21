@@ -58,7 +58,7 @@ chat_completion(openai: "gpt-4.1-nano", messages: [{ user: "What is the meaning 
 Raix supports [Predicted Outputs](https://platform.openai.com/docs/guides/latency-optimization#use-predicted-outputs) with the `prediction` parameter for OpenAI.
 
 ```ruby
->> ai.chat_completion(openai: "gpt-4o", params: { prediction: })
+>> ai.chat_completion(openai: "gpt-4o", prediction:)
 ```
 
 ### Prompt Caching
@@ -68,7 +68,7 @@ Raix supports [Anthropic-style prompt caching](https://openrouter.ai/docs/prompt
 Note that there is a limit of four breakpoints, and the cache will expire within five minutes. Therefore, it is recommended to reserve the cache breakpoints for large bodies of text, such as character cards, CSV data, RAG data, book chapters, etc. Raix does not enforce a limit on the number of breakpoints, which means that you might get an error if you try to cache too many messages.
 
 ```ruby
->> my_class.chat_completion(params: { cache_at: 1000 })
+>> my_class.chat_completion(cache_at: 1000)
 => {
   "messages": [
     {
@@ -672,7 +672,7 @@ class StructuredResponse
     })
 
     transcript << { user: "Analyze the person named #{name}" }
-    chat_completion(params: { response_format: format })
+  chat_completion(response_format: format)
   end
 end
 

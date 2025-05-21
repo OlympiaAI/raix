@@ -120,7 +120,7 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
       # With OpenAI:
       expect { WhatIsTheWeather.new.chat_completion(openai: "gpt-4o", loop: true) }.to raise_error(/unauthorized function call/i)
       # With OpenRouter:
-      expect { WhatIsTheWeather.new.chat_completion(openai: false, params: { model: "gpt-4o" }, loop: true) }.to raise_error(/unauthorized function call/i)
+    expect { WhatIsTheWeather.new.chat_completion(openai: false, model: "gpt-4o", loop: true) }.to raise_error(/unauthorized function call/i)
     ensure
       Raix.configuration.openai_client = previous_clients[:openai]
       Raix.configuration.openrouter_client = previous_clients[:openrouter]
