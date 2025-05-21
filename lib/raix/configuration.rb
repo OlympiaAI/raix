@@ -56,6 +56,10 @@ module Raix
       self.fallback = fallback
     end
 
+    def client?
+      !!(openrouter_client || openai_client)
+    end
+
     private
 
     attr_accessor :fallback
