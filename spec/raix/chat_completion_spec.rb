@@ -26,7 +26,7 @@ RSpec.describe MeaningOfLife, :vcr do
   end
 
   context "with predicted outputs" do
-    let(:completion) { subject.chat_completion(openai: "gpt-4o", params: { prediction: }) }
+    let(:completion) { subject.chat_completion(openai: "gpt-4o", prediction:) }
     let(:prediction) do
       "THE MEANING OF LIFE CAN VARY GREATLY FROM PERSON TO PERSON, OFTEN INVOLVING THE PURSUIT OF HAPPINESS, CARE OF OTHERS, AND PERSONAL GROWTH!."
     end

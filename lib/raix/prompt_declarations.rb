@@ -61,11 +61,13 @@ module PromptDeclarations
   # @raise [RuntimeError] If no prompts are defined.
   #
   # @param prompt [String] The prompt to use for the chat completion.
-  # @param params [Hash] Parameters for the chat completion.
   # @param raw [Boolean] Whether to return the raw response.
+  # @param openai [Boolean|String] Whether to use OpenAI directly.
+  # @param params [Hash] Additional API parameters to pass through to
+  #   {ChatCompletion#chat_completion}.
   #
   # TODO: SHOULD NOT HAVE A DIFFERENT INTERFACE THAN PARENT
-  def chat_completion(prompt = nil, params: {}, raw: false, openai: false)
+  def chat_completion(prompt = nil, raw: false, openai: false, **params)
     raise "No prompts defined" unless self.class.prompts.present?
 
     loop_count = 0
@@ -107,7 +109,7 @@ module PromptDeclarations
         # set the stream if necessary
         self.stream = instance_exec(&current_prompt.stream) if current_prompt.stream.present?
 
-        execute_ai_request(params:, raw:, openai:, transcript:, loop_count:)
+        execute_ai_request(raw:, openai:, transcript:, loop_count:, **params)
       end
 
       next unless current_prompt.until.present? && !instance_exec(&current_prompt.until)
@@ -133,8 +135,8 @@ module PromptDeclarations
     last_response
   end
 
-  def execute_ai_request(params:, raw:, openai:, transcript:, loop_count:)
-    chat_completion_from_superclass(params:, raw:, openai:).then do |response|
+  def execute_ai_request(raw:, openai:, transcript:, loop_count:, **params)
+    chat_completion_from_superclass(raw:, openai:, **params).then do |response|
       transcript << { assistant: response }
       @last_response = send(current_prompt.name, response)
       self.stream = nil # clear it again so it's not used for the next prompt
