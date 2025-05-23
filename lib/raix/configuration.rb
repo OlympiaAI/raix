@@ -3,38 +3,38 @@
 module Raix
   # The Configuration class holds the configuration options for the Raix gem.
   class Configuration
+    def self.attr_accessor_with_fallback(method_name)
+      define_method(method_name) do
+        value = instance_variable_get("@#{method_name}")
+        return value if value
+        return unless fallback
+
+        fallback.public_send(method_name)
+      end
+      define_method("#{method_name}=") do |value|
+        instance_variable_set("@#{method_name}", value)
+      end
+    end
+
     # The temperature option determines the randomness of the generated text.
     # Higher values result in more random output.
-    def temperature
-      get_with_fallback(:temperature)
-    end
-    attr_writer :temperature, :max_tokens, :max_completion_tokens, :model, :openrouter_client, :openai_client
+    attr_accessor_with_fallback :temperature
 
     # The max_tokens option determines the maximum number of tokens to generate.
-    def max_tokens
-      get_with_fallback(:max_tokens)
-    end
+    attr_accessor_with_fallback :max_tokens
 
     # The max_completion_tokens option determines the maximum number of tokens to generate.
-    def max_completion_tokens
-      get_with_fallback(:max_completion_tokens)
-    end
+    attr_accessor_with_fallback :max_completion_tokens
 
     # The model option determines the model to use for text generation. This option
     # is normally set in each class that includes the ChatCompletion module.
-    def model
-      get_with_fallback(:model)
-    end
+    attr_accessor_with_fallback :model
 
     # The openrouter_client option determines the default client to use for communication.
-    def openrouter_client
-      get_with_fallback(:openrouter_client)
-    end
+    attr_accessor_with_fallback :openrouter_client
 
     # The openai_client option determines the OpenAI client to use for communication.
-    def openai_client
-      get_with_fallback(:openai_client)
-    end
+    attr_accessor_with_fallback :openai_client
 
     DEFAULT_MAX_TOKENS = 1000
     DEFAULT_MAX_COMPLETION_TOKENS = 16_384
