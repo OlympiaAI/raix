@@ -59,12 +59,11 @@ RSpec.describe MeaningOfLife, :vcr do
   end
 end
 
-
 RSpec.describe TestClassLevelConfiguration do
-  it 'calls the open router gem with the correct model' do
+  it "calls the open router gem with the correct model" do
     expect(Raix.configuration.openrouter_client).to receive(:complete) do |_messages, params|
       expect(params[:model]).to eq("drama-llama")
-    end.and_return({'choices' =>  [{'message' =>  {'content' => "The meaning of life is to find your own meaning."}}]})
+    end.and_return({ "choices" => [{ "message" => { "content" => "The meaning of life is to find your own meaning." } }] })
     subject.chat_completion
   end
 end
