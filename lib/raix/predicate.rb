@@ -26,11 +26,8 @@ module Raix
   #   question = Question.new
   #   question.ask("Is Ruby a programming language?")
   module Predicate
+    extend ActiveSupport::Concern
     include ChatCompletion
-
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
 
     def ask(question, openai: false)
       raise "Please define a yes and/or no block" if self.class.yes_block.nil? && self.class.no_block.nil?

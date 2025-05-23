@@ -703,6 +703,21 @@ You can add an initializer to your application's `config/initializers` directory
 
 You will also need to configure the OpenRouter API access token as per the instructions here: https://github.com/OlympiaAI/open_router?tab=readme-ov-file#quickstart
 
+### Global vs class level configuration
+
+You can either configure Raix globally or at the class level. The global configuration is set in the initializer as shown above. You can however also override all configuration options of the `Configuration` class on the class level with the
+same syntax:
+
+```ruby
+class MyClass
+  include Raix::ChatCompletion
+
+  configure do |config|
+    config.openrouter_client = OpenRouter::Client.new # with my special options
+  end
+end
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
