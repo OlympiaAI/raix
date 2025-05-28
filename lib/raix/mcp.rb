@@ -18,6 +18,8 @@ require "faraday"
 require "uri"
 require "json"
 
+require_relative "raix/mcp/stdio_client"
+
 module Raix
   # Model Context Protocol integration for Raix
   #
@@ -27,6 +29,9 @@ module Raix
   # - Handles transcript recording and response processing
   module MCP
     extend ActiveSupport::Concern
+
+    # Error raised when there's a protocol-level error in MCP communication
+    class ProtocolError < StandardError; end
 
     JSONRPC_VERSION = "2.0".freeze
     PROTOCOL_VERSION = "2024-11-05".freeze # Current supported protocol version
