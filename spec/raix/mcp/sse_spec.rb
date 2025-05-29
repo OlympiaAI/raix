@@ -74,7 +74,7 @@ RSpec.describe Raix::MCP do
       transcript_size_before = consumer.transcript.size
 
       # Call the function with a simple query
-      result = consumer.public_send(function_name, query: "What is Raix?")
+      result = consumer.public_send(function_name, { query: "What is Raix?" }, nil)
 
       # Verify we got a result and transcript was updated
       expect(result).to be_a(String)

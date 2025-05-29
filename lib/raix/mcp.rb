@@ -110,10 +110,13 @@ module Raix
           # --- register with FunctionDispatch (adds to .functions)
           function(local_name, description, **{}) # placeholder parameters replaced next
           latest_definition = functions.last
-          latest_definition[:parameters] = input_schema.deep_symbolize_keys if input_schema.present?
+          latest_definition[:parameters] = input_schema.deep_symbolize_keys || {}
+
+          # Required by OpenAI
+          latest_definition[:parameters][:properties] ||= {}
 
           # --- define an instance method that proxies to the server
-          define_method(local_name) do |**arguments|
+          define_method(local_name) do |arguments, _cache|
             arguments ||= {}
 
             content_text = client.call_tool(remote_name, **arguments)
