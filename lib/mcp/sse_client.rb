@@ -155,6 +155,8 @@ module Raix
           @event_queue << { result: parsed[:result] }
         end
       rescue JSON::ParserError => e
+        puts "[MCP DEBUG] Error parsing message: #{e.message}"
+        puts "[MCP DEBUG] Message data: #{event_data}"
       end
 
       # Initialize the MCP session
@@ -195,7 +197,7 @@ module Raix
           faraday.options.timeout = CONNECTION_TIMEOUT
         end
 
-        response = conn.post do |req|
+        conn.post do |req|
           req.headers["Content-Type"] = "application/json"
           req.body = body.to_json
         end
@@ -220,7 +222,7 @@ module Raix
           req.body = body.to_json
         end
       rescue StandardError => e
-        # puts "[MCP DEBUG] Error sending notification: #{e.message}"
+        puts "[MCP DEBUG] Error sending notification: #{e.message}"
       end
 
       # Wait for a response with a specific ID

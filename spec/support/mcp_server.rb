@@ -1,7 +1,4 @@
-#!/usr/bin/env ruby
 # frozen_string_literal: true
-
-# rubocop:disable Metrics/ClassLength
 
 require "json"
 
@@ -158,5 +155,3 @@ if __FILE__ == $PROGRAM_NAME
   server = TestMCPServer.new
   server.run
 end
-
-# rubocop:enable Metrics/ClassLength
