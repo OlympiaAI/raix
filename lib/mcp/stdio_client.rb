@@ -8,6 +8,7 @@ module Raix
     class StdioClient
       # Creates a new client with a bidirectional pipe to the MCP server.
       def initialize(*args, env)
+        @args = args
         @io = IO.popen(env, args, "w+")
       end
 
@@ -33,6 +34,10 @@ module Raix
       # Closes the connection to the server.
       def close
         @io.close
+      end
+
+      def unique_key
+        @args.join(" ").parameterize.underscore
       end
 
       private

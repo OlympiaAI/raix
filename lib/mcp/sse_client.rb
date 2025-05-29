@@ -15,13 +15,14 @@ module Raix
       # Creates a new client and establishes SSE connection to discover the JSON-RPC endpoint.
       #
       # @param url [String] the SSE endpoint URL
-      def initialize(url)
+      def initialize(url, headers: {})
         @url = url
         @endpoint_url = nil
         @sse_thread = nil
         @event_queue = Thread::Queue.new
         @buffer = ""
         @closed = false
+        @headers = headers
 
         # Start the SSE connection and discover endpoint
         establish_sse_connection
@@ -72,6 +73,10 @@ module Raix
         @connection&.close
       end
 
+      def unique_key
+        @url.parameterize.underscore.gsub("https_", "")
+      end
+
       private
 
       # Establishes and maintains the SSE connection
@@ -82,7 +87,7 @@ module Raix
             "Cache-Control" => "no-cache",
             "Connection" => "keep-alive",
             "MCP-Version" => PROTOCOL_VERSION
-          }
+          }.merge(@headers)
 
           @connection = Faraday.new(url: @url) do |faraday|
             faraday.options.timeout = CONNECTION_TIMEOUT

@@ -35,9 +35,32 @@ module Raix
     JSONRPC_VERSION = "2.0".freeze
 
     class_methods do
-      # Declare an MCP server by URL.
+      # Declare an MCP server by URL, using the SSE transport.
       #
-      #   mcp "https://server.example.com/sse"
+      #   sse_mcp "https://server.example.com/sse",
+      #           headers: { "Authorization" => "Bearer <token>" },
+      #           only: [:get_issue]
+      #
+      def sse_mcp(url, headers: {}, only: nil, except: nil)
+        mcp(only:, except:, client: MCP::SseClient.new(url, headers:))
+      end
+
+      # Declare an MCP server by command line arguments, and environment variables  ,
+      # using the stdio transport.
+      #
+      #   stdio_mcp "docker", "run", "-i", "--rm",
+      #             "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+      #             "ghcr.io/github/github-mcp-server",
+      #             env: { GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}" },
+      #             only: [:github_search]
+      #
+      def stdio_mcp(*args, env: {}, only: nil, except: nil)
+        mcp(only:, except:, client: MCP::StdioClient.new(*args, env))
+      end
+
+      # Declare an MCP server, using the given client.
+      #
+      #   mcp client: MCP::SseClient.new("https://server.example.com/sse")
       #
       # This will automatically:
       #   • query `tools/list` on the server
@@ -47,13 +70,12 @@ module Raix
       #     call to the server and appends the proper messages to the
       #     transcript.
       # NOTE TO SELF: NEVER MOCK SERVER RESPONSES! THIS MUST WORK WITH REAL SERVERS!
-      def mcp(url, only: nil, except: nil)
+      def mcp(client:, only: nil, except: nil)
         @mcp_servers ||= {}
 
-        return if @mcp_servers.key?(url) # avoid duplicate definitions
+        return if @mcp_servers.key?(client.unique_key) # avoid duplicate definitions
 
-        # Create SSE client and fetch tools
-        client = MCP::SseClient.new(url)
+        # Fetch tools
         tools = client.tools
 
         if tools.empty?
@@ -80,7 +102,7 @@ module Raix
         filtered_tools.each do |tool|
           remote_name = tool.name
           # TODO: Revisit later whether this much context is needed in the function name
-          local_name = "#{url.parameterize.underscore}_#{remote_name}".gsub("https_", "").to_sym
+          local_name = "#{client.unique_key}_#{remote_name}".to_sym
 
           description = tool.description
           input_schema = tool.input_schema || {}
@@ -94,49 +116,42 @@ module Raix
           define_method(local_name) do |**arguments|
             arguments ||= {}
 
-            # Create a fresh client for each call
-            call_client = MCP::SseClient.new(url)
+            content_text = client.call_tool(remote_name, **arguments)
+            call_id = SecureRandom.uuid
 
-            begin
-              content_text = call_client.call_tool(remote_name, **arguments)
-              call_id = SecureRandom.uuid
-
-              # Mirror FunctionDispatch transcript behaviour
-              transcript << [
-                {
-                  role: "assistant",
-                  content: nil,
-                  tool_calls: [
-                    {
-                      id: call_id,
-                      type: "function",
-                      function: {
-                        name: remote_name,
-                        arguments: arguments.to_json
-                      }
+            # Mirror FunctionDispatch transcript behaviour
+            transcript << [
+              {
+                role: "assistant",
+                content: nil,
+                tool_calls: [
+                  {
+                    id: call_id,
+                    type: "function",
+                    function: {
+                      name: remote_name,
+                      arguments: arguments.to_json
                     }
-                  ]
-                },
-                {
-                  role: "tool",
-                  tool_call_id: call_id,
-                  name: remote_name,
-                  content: content_text
-                }
-              ]
+                  }
+                ]
+              },
+              {
+                role: "tool",
+                tool_call_id: call_id,
+                name: remote_name,
+                content: content_text
+              }
+            ]
 
-              # Continue the chat loop if requested (same semantics as FunctionDispatch)
-              chat_completion(**chat_completion_args) if loop
+            # Continue the chat loop if requested (same semantics as FunctionDispatch)
+            chat_completion(**chat_completion_args) if loop
 
-              content_text
-            ensure
-              call_client.close
-            end
+            content_text
           end
         end
 
         # Store the URL, tools, and client for future use
-        @mcp_servers[url] = { tools: filtered_tools, client: }
+        @mcp_servers[client.unique_key] = { tools: filtered_tools, client: }
       end
     end
   end
