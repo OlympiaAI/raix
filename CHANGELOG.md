@@ -1,3 +1,12 @@
+## [0.8.6] - 2025-05-19
+- add `required` and `optional` flags for parameters in `function` declarations
+
+## [0.8.5] - 2025-05-08
+- renamed `tools` argument to `chat_completion` to `available_tools` to prevent shadowing the existing tool attribute (potentially breaking change to enhancement introduced in 0.8.1)
+
+## [0.8.4] - 2025-05-07
+- Calls strip instead of squish on response of chat_completion in order to not clobber linebreaks
+
 ## [0.8.3] - 2025-04-30
 - Adds optional ActiveSupport Cache parameter to `dispatch_tool_function` for caching tool calls
 
