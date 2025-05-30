@@ -36,6 +36,9 @@ Metrics/PerceivedComplexity:
 Metrics/ParameterLists:
   Enabled: false
 
+Metrics/ClassLength:
+  Enabled: false
+
 Style/FrozenStringLiteralComment:
   Enabled: false
 
