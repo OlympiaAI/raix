@@ -174,7 +174,11 @@ module Raix
 
       coerced = {}
       schema["properties"].each do |key, prop_schema|
-        value = arguments[key] || arguments[key.to_sym]
+        value = if arguments.key?(key)
+                  arguments[key]
+                elsif arguments.key?(key.to_sym)
+                  arguments[key.to_sym]
+                end
         next if value.nil?
 
         coerced[key] = coerce_value(value, prop_schema)
