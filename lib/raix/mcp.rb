@@ -115,11 +115,19 @@ module Raix
           # Required by OpenAI
           latest_definition[:parameters][:properties] ||= {}
 
+          # Store the schema for type coercion
+          tool_schemas = @tool_schemas ||= {}
+          tool_schemas[local_name] = input_schema
+
           # --- define an instance method that proxies to the server
           define_method(local_name) do |arguments, _cache|
             arguments ||= {}
 
-            content_text = client.call_tool(remote_name, **arguments)
+            # Coerce argument types based on the input schema
+            stored_schema = self.class.instance_variable_get(:@tool_schemas)&.dig(local_name)
+            coerced_arguments = coerce_arguments(arguments, stored_schema)
+
+            content_text = client.call_tool(remote_name, **coerced_arguments)
             call_id = SecureRandom.uuid
 
             # Mirror FunctionDispatch transcript behaviour
@@ -156,6 +164,56 @@ module Raix
         # Store the URL, tools, and client for future use
         @mcp_servers[client.unique_key] = { tools: filtered_tools, client: }
       end
+    end
+
+    private
+
+    # Coerce argument types based on the JSON schema
+    def coerce_arguments(arguments, schema)
+      return arguments unless schema.is_a?(Hash) && schema["properties"].is_a?(Hash)
+
+      coerced = {}
+      schema["properties"].each do |key, prop_schema|
+        value = arguments[key] || arguments[key.to_sym]
+        next if value.nil?
+
+        coerced[key] = case prop_schema["type"]
+                       when "number", "integer"
+                         if value.is_a?(String) && value.match?(/\A-?\d+(\.\d+)?\z/)
+                           prop_schema["type"] == "integer" ? value.to_i : value.to_f
+                         else
+                           value
+                         end
+                       when "boolean"
+                         case value
+                         when "true", true then true
+                         when "false", false then false
+                         else value
+                         end
+                       when "array"
+                         begin
+                           value.is_a?(String) ? JSON.parse(value) : value
+                         rescue JSON::ParserError
+                           value
+                         end
+                       when "object"
+                         begin
+                           value.is_a?(String) ? JSON.parse(value) : value
+                         rescue JSON::ParserError
+                           value
+                         end
+                       else
+                         value
+                       end
+      end
+
+      # Include any additional arguments not in the schema
+      arguments.each do |key, value|
+        key_str = key.to_s
+        coerced[key_str] = value unless coerced.key?(key_str)
+      end
+
+      coerced.with_indifferent_access
     end
   end
 end
