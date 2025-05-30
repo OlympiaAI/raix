@@ -1,3 +1,14 @@
+## [0.9.1] - 2025-05-30
+### Added
+- **MCP Type Coercion** - Automatic type conversion for MCP tool arguments based on JSON schema
+  - Supports integer, number, boolean, array, and object types
+  - Handles nested objects and arrays of objects with proper coercion
+  - Gracefully handles invalid JSON and type mismatches
+- **MCP Image Support** - MCP tools can now return image content as structured JSON
+
+### Fixed
+- Fixed handling of nil values in MCP argument coercion
+
 ## [0.9.0] - 2025-05-30
 ### Added
 - **MCP (Model Context Protocol) Support**
