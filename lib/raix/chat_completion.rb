@@ -38,6 +38,23 @@ module Raix
                   :prediction, :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
                   :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :available_tools, :tool_choice, :provider
 
+    class_methods do
+      # Returns the current configuration of this class. Falls back to global configuration for unset values.
+      def configuration
+        @configuration ||= Configuration.new(fallback: Raix.configuration)
+      end
+
+      # Let's you configure the class-level configuration using a block.
+      def configure
+        yield(configuration)
+      end
+    end
+
+    # Instance level access to the class-level configuration.
+    def configuration
+      self.class.configuration
+    end
+
     # This method performs chat completion based on the provided transcript and parameters.
     #
     # @param params [Hash] The parameters for chat completion.
@@ -54,8 +71,8 @@ module Raix
       params[:frequency_penalty] ||= frequency_penalty.presence
       params[:logit_bias] ||= logit_bias.presence
       params[:logprobs] ||= logprobs.presence
-      params[:max_completion_tokens] ||= max_completion_tokens.presence || Raix.configuration.max_completion_tokens
-      params[:max_tokens] ||= max_tokens.presence || Raix.configuration.max_tokens
+      params[:max_completion_tokens] ||= max_completion_tokens.presence || configuration.max_completion_tokens
+      params[:max_tokens] ||= max_tokens.presence || configuration.max_tokens
       params[:min_p] ||= min_p.presence
       params[:prediction] = { type: "content", content: params[:prediction] || prediction } if params[:prediction] || prediction.present?
       params[:presence_penalty] ||= presence_penalty.presence
@@ -64,7 +81,7 @@ module Raix
       params[:response_format] ||= response_format.presence
       params[:seed] ||= seed.presence
       params[:stop] ||= stop.presence
-      params[:temperature] ||= temperature.presence || Raix.configuration.temperature
+      params[:temperature] ||= temperature.presence || configuration.temperature
       params[:tool_choice] ||= tool_choice.presence
       params[:tools] = if available_tools == false
                          nil
@@ -95,7 +112,7 @@ module Raix
       self.loop = loop
 
       # set the model to the default if not provided
-      self.model ||= Raix.configuration.model
+      self.model ||= configuration.model
 
       adapter = MessageAdapters::Base.new(self)
 
@@ -227,7 +244,7 @@ module Raix
 
       params.delete(:temperature) if model.start_with?("o")
 
-      Raix.configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
+      configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
     end
 
     def openrouter_request(params:, model:, messages:)
@@ -237,7 +254,7 @@ module Raix
       retry_count = 0
 
       begin
-        Raix.configuration.openrouter_client.complete(messages, model:, extras: params.compact, stream:)
+        configuration.openrouter_client.complete(messages, model:, extras: params.compact, stream:)
       rescue OpenRouter::ServerError => e
         if e.message.include?("retry")
           puts "Retrying OpenRouter request... (#{retry_count} attempts) #{e.message}"

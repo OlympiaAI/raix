@@ -10,6 +10,18 @@ class MeaningOfLife
   end
 end
 
+class TestClassLevelConfiguration
+  include Raix::ChatCompletion
+
+  configure do |config|
+    config.model = "drama-llama"
+  end
+
+  def initialize
+    transcript << { user: "What is the meaning of life?" }
+  end
+end
+
 RSpec.describe MeaningOfLife, :vcr do
   subject { described_class.new }
 
@@ -44,5 +56,14 @@ RSpec.describe MeaningOfLife, :vcr do
       expect(response.dig("usage", "completion_tokens_details", "accepted_prediction_tokens")).to be > 0
       expect(response.dig("usage", "completion_tokens_details", "rejected_prediction_tokens")).to be > 0
     end
+  end
+end
+
+RSpec.describe TestClassLevelConfiguration do
+  it "calls the open router gem with the correct model" do
+    expect(Raix.configuration.openrouter_client).to receive(:complete) do |_messages, params|
+      expect(params[:model]).to eq("drama-llama")
+    end.and_return({ "choices" => [{ "message" => { "content" => "The meaning of life is to find your own meaning." } }] })
+    subject.chat_completion
   end
 end
