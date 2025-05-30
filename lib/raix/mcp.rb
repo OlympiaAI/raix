@@ -235,7 +235,7 @@ module Raix
           coerced_object = {}
           schema["properties"].each do |prop_key, prop_schema|
             prop_value = object_value[prop_key] || object_value[prop_key.to_sym]
-            coerced_object[prop_key] = coerce_value(prop_value, prop_schema) if prop_value
+            coerced_object[prop_key] = coerce_value(prop_value, prop_schema) unless prop_value.nil?
           end
 
           # Include any additional properties not in the schema
