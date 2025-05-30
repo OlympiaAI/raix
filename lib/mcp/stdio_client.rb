@@ -21,14 +21,34 @@ module Raix
         end
       end
 
-      # Executes a tool with given arguments, returns text content.
+      # Executes a tool with given arguments.
+      # Returns text content directly, or JSON-encoded data for other content types.
       def call_tool(name, **arguments)
         result = call("tools/call", name:, arguments:)
-        unless result.dig("content", 0, "type") == "text"
-          raise NotImplementedError, "Only text is supported"
-        end
+        content = result["content"]
+        return "" if content.nil? || content.empty?
 
-        result.dig("content", 0, "text")
+        # Handle different content formats
+        first_item = content.first
+        case first_item
+        when Hash
+          case first_item["type"]
+          when "text"
+            first_item["text"]
+          when "image"
+            # Return a structured response for images
+            {
+              type: "image",
+              data: first_item["data"],
+              mime_type: first_item["mimeType"] || "image/png"
+            }.to_json
+          else
+            # For any other type, return the item as JSON
+            first_item.to_json
+          end
+        else
+          first_item.to_s
+        end
       end
 
       # Closes the connection to the server.

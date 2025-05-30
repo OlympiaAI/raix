@@ -80,11 +80,14 @@ RSpec.describe Raix::MCP::StdioClient do
       expect(JSON.parse(result)).to include("processed" => true)
     end
 
-    it "raises NotImplementedError for non-text content" do
-      # The test server should have a tool that returns non-text content
-      expect do
-        client.call_tool("binary_data")
-      end.to raise_error(NotImplementedError, "Only text is supported")
+    it "handles image content by returning structured JSON" do
+      result = client.call_tool("binary_data")
+      expect(result).to be_a(String)
+
+      parsed = JSON.parse(result)
+      expect(parsed["type"]).to eq("image")
+      expect(parsed["data"]).to eq("base64encodeddata")
+      expect(parsed["mime_type"]).to eq("image/png")
     end
 
     it "raises ProtocolError for invalid tool names" do
