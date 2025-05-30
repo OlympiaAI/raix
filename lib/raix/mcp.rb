@@ -177,34 +177,7 @@ module Raix
         value = arguments[key] || arguments[key.to_sym]
         next if value.nil?
 
-        coerced[key] = case prop_schema["type"]
-                       when "number", "integer"
-                         if value.is_a?(String) && value.match?(/\A-?\d+(\.\d+)?\z/)
-                           prop_schema["type"] == "integer" ? value.to_i : value.to_f
-                         else
-                           value
-                         end
-                       when "boolean"
-                         case value
-                         when "true", true then true
-                         when "false", false then false
-                         else value
-                         end
-                       when "array"
-                         begin
-                           value.is_a?(String) ? JSON.parse(value) : value
-                         rescue JSON::ParserError
-                           value
-                         end
-                       when "object"
-                         begin
-                           value.is_a?(String) ? JSON.parse(value) : value
-                         rescue JSON::ParserError
-                           value
-                         end
-                       else
-                         value
-                       end
+        coerced[key] = coerce_value(value, prop_schema)
       end
 
       # Include any additional arguments not in the schema
@@ -214,6 +187,66 @@ module Raix
       end
 
       coerced.with_indifferent_access
+    end
+
+    # Coerce a single value based on its schema
+    def coerce_value(value, schema)
+      return value unless schema.is_a?(Hash)
+
+      case schema["type"]
+      when "number", "integer"
+        if value.is_a?(String) && value.match?(/\A-?\d+(\.\d+)?\z/)
+          schema["type"] == "integer" ? value.to_i : value.to_f
+        else
+          value
+        end
+      when "boolean"
+        case value
+        when "true", true then true
+        when "false", false then false
+        else value
+        end
+      when "array"
+        array_value = begin
+          value.is_a?(String) ? JSON.parse(value) : value
+        rescue JSON::ParserError
+          value
+        end
+
+        # If there's an items schema, coerce each element
+        if array_value.is_a?(Array) && schema["items"]
+          array_value.map { |item| coerce_value(item, schema["items"]) }
+        else
+          array_value
+        end
+      when "object"
+        object_value = begin
+          value.is_a?(String) ? JSON.parse(value) : value
+        rescue JSON::ParserError
+          value
+        end
+
+        # If there are properties defined, coerce them recursively
+        if object_value.is_a?(Hash) && schema["properties"]
+          coerced_object = {}
+          schema["properties"].each do |prop_key, prop_schema|
+            prop_value = object_value[prop_key] || object_value[prop_key.to_sym]
+            coerced_object[prop_key] = coerce_value(prop_value, prop_schema) if prop_value
+          end
+
+          # Include any additional properties not in the schema
+          object_value.each do |obj_key, obj_value|
+            obj_key_str = obj_key.to_s
+            coerced_object[obj_key_str] = obj_value unless coerced_object.key?(obj_key_str)
+          end
+
+          coerced_object
+        else
+          object_value
+        end
+      else
+        value
+      end
     end
   end
 end
