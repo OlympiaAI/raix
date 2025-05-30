@@ -12,3 +12,4 @@
 *.gem
 .env
 .envrc
+.claude/settings.local.json

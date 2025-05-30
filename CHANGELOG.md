@@ -1,3 +1,18 @@
+## [0.9.0] - 2025-05-30
+### Added
+- **MCP (Model Context Protocol) Support**
+  - New `stdio_mcp` method for stdio-based MCP servers
+  - Refactored existing MCP code into `SseClient` and `StdioClient`
+  - Split top-level `mcp` method into `sse_mcp` and `stdio_mcp`
+  - Added authentication support for MCP servers
+- **Class-Level Configuration**
+  - Moved configuration to separate `Configuration` class
+  - Added fallback mechanism for configuration options
+  - Cleaner metaprogramming implementation
+
+### Fixed
+- Fixed method signature of functions added via MCP
+
 ## [0.8.6] - 2025-05-19
 - add `required` and `optional` flags for parameters in `function` declarations
 
