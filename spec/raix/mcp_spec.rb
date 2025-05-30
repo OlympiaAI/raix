@@ -187,7 +187,7 @@ RSpec.describe "MCP type coercion" do
 
     result = instance.send(:coerce_arguments, arguments, schema)
 
-    expect(result["tags"]).to eq(["tag1", "tag2", "tag3"])
+    expect(result["tags"]).to eq(%w[tag1 tag2 tag3])
     expect(result["config"]["enabled"]).to eq(true)
     expect(result["config"]["extra"]).to eq("value") # preserves extra properties
   end
@@ -268,7 +268,7 @@ RSpec.describe "MCP type coercion" do
     }
 
     arguments = {
-      value: "100"  # symbol key
+      value: "100" # symbol key
     }
 
     result = instance.send(:coerce_arguments, arguments, schema)
