@@ -42,7 +42,8 @@ module Raix
         end
       end
 
-      # Executes a tool with given arguments, returns text content.
+      # Executes a tool with given arguments.
+      # Returns text content directly, or JSON-encoded data for other content types.
       def call_tool(name, **arguments)
         request_id = SecureRandom.uuid
         send_json_rpc(request_id, "tools/call", name:, arguments:)
@@ -56,9 +57,18 @@ module Raix
         first_item = content.first
         case first_item
         when Hash
-          if first_item[:type] == "text"
+          case first_item[:type]
+          when "text"
             first_item[:text]
+          when "image"
+            # Return a structured response for images
+            {
+              type: "image",
+              data: first_item[:data],
+              mime_type: first_item[:mimeType] || "image/png"
+            }.to_json
           else
+            # For any other type, return the item as JSON
             first_item.to_json
           end
         else

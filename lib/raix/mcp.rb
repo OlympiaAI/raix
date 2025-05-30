@@ -115,11 +115,19 @@ module Raix
           # Required by OpenAI
           latest_definition[:parameters][:properties] ||= {}
 
+          # Store the schema for type coercion
+          tool_schemas = @tool_schemas ||= {}
+          tool_schemas[local_name] = input_schema
+
           # --- define an instance method that proxies to the server
           define_method(local_name) do |arguments, _cache|
             arguments ||= {}
 
-            content_text = client.call_tool(remote_name, **arguments)
+            # Coerce argument types based on the input schema
+            stored_schema = self.class.instance_variable_get(:@tool_schemas)&.dig(local_name)
+            coerced_arguments = coerce_arguments(arguments, stored_schema)
+
+            content_text = client.call_tool(remote_name, **coerced_arguments)
             call_id = SecureRandom.uuid
 
             # Mirror FunctionDispatch transcript behaviour
@@ -155,6 +163,93 @@ module Raix
 
         # Store the URL, tools, and client for future use
         @mcp_servers[client.unique_key] = { tools: filtered_tools, client: }
+      end
+    end
+
+    private
+
+    # Coerce argument types based on the JSON schema
+    def coerce_arguments(arguments, schema)
+      return arguments unless schema.is_a?(Hash) && schema["properties"].is_a?(Hash)
+
+      coerced = {}
+      schema["properties"].each do |key, prop_schema|
+        value = if arguments.key?(key)
+                  arguments[key]
+                elsif arguments.key?(key.to_sym)
+                  arguments[key.to_sym]
+                end
+        next if value.nil?
+
+        coerced[key] = coerce_value(value, prop_schema)
+      end
+
+      # Include any additional arguments not in the schema
+      arguments.each do |key, value|
+        key_str = key.to_s
+        coerced[key_str] = value unless coerced.key?(key_str)
+      end
+
+      coerced.with_indifferent_access
+    end
+
+    # Coerce a single value based on its schema
+    def coerce_value(value, schema)
+      return value unless schema.is_a?(Hash)
+
+      case schema["type"]
+      when "number", "integer"
+        if value.is_a?(String) && value.match?(/\A-?\d+(\.\d+)?\z/)
+          schema["type"] == "integer" ? value.to_i : value.to_f
+        else
+          value
+        end
+      when "boolean"
+        case value
+        when "true", true then true
+        when "false", false then false
+        else value
+        end
+      when "array"
+        array_value = begin
+          value.is_a?(String) ? JSON.parse(value) : value
+        rescue JSON::ParserError
+          value
+        end
+
+        # If there's an items schema, coerce each element
+        if array_value.is_a?(Array) && schema["items"]
+          array_value.map { |item| coerce_value(item, schema["items"]) }
+        else
+          array_value
+        end
+      when "object"
+        object_value = begin
+          value.is_a?(String) ? JSON.parse(value) : value
+        rescue JSON::ParserError
+          value
+        end
+
+        # If there are properties defined, coerce them recursively
+        if object_value.is_a?(Hash) && schema["properties"]
+          coerced_object = {}
+          schema["properties"].each do |prop_key, prop_schema|
+            prop_value = object_value[prop_key] || object_value[prop_key.to_sym]
+            coerced_object[prop_key] = coerce_value(prop_value, prop_schema) unless prop_value.nil?
+          end
+
+          # Include any additional properties not in the schema
+          object_value.each do |obj_key, obj_value|
+            obj_key_str = obj_key.to_s
+            coerced_object[obj_key_str] = obj_value unless coerced_object.key?(obj_key_str)
+          end
+
+          coerced_object
+        else
+          object_value
+        end
+      else
+        value
       end
     end
   end
