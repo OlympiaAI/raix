@@ -4,7 +4,7 @@ class MeaningOfLife
   include Raix::ChatCompletion
 
   def initialize
-    self.model = "meta-llama/llama-3-8b-instruct:free"
+    self.model = "meta-llama/llama-3.3-8b-instruct:free"
     self.seed = 9999 # try to get reproduceable results
     transcript << { user: "What is the meaning of life?" }
   end

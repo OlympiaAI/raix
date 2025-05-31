@@ -38,7 +38,7 @@ module Raix
 
     DEFAULT_MAX_TOKENS = 1000
     DEFAULT_MAX_COMPLETION_TOKENS = 16_384
-    DEFAULT_MODEL = "meta-llama/llama-3-8b-instruct:free"
+    DEFAULT_MODEL = "meta-llama/llama-3.3-8b-instruct:free"
     DEFAULT_TEMPERATURE = 0.0
 
     # Initializes a new instance of the Configuration class with default values.
