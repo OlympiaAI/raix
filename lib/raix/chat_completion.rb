@@ -57,15 +57,22 @@ module Raix
 
     # This method performs chat completion based on the provided transcript and parameters.
     #
-    # @param params [Hash] The parameters for chat completion.
-    # @option loop [Boolean] :loop (false) Whether to loop the chat completion after function calls.
-    # @option params [Boolean] :json (false) Whether to return the parse the response as a JSON object. Will search for <json> tags in the response first, then fall back to the default JSON parsing of the entire response.
-    # @option params [Boolean] :openai (false) Whether to use OpenAI's API instead of OpenRouter's.
-    # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
-    # @option params [Array] :messages (nil) An array of messages to use instead of the transcript.
-    # @option tools [Array|false] :available_tools (nil) Tools to pass to the LLM. Ignored if nil (default). If false, no tools are passed. If an array, only declared tools in the array are passed.
+    # @param loop [Boolean] Whether to loop the chat completion after function calls.
+    # @param json [Boolean] Whether to return the response as a JSON object.
+    #   Will search for <json> tags in the response first, then fall back to the
+    #   default JSON parsing of the entire response.
+    # @param openai [Boolean|String] Whether to use OpenAI's API instead of
+    #   OpenRouter's. Pass a String to specify the model name.
+    # @param raw [Boolean] Whether to return the raw response or dig the text
+    #   content.
+    # @param messages [Array] An array of messages to use instead of the
+    #   transcript.
+    # @param available_tools [Array|false] Tools to pass to the LLM. Ignored if
+    #   nil (default). If false, no tools are passed. If an array, only declared
+    #   tools in the array are passed.
+    # @param params [Hash] Additional API parameters.
     # @return [String|Hash] The completed chat response.
-    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil, available_tools: nil)
+    def chat_completion(loop: false, json: false, raw: false, openai: false, save_response: true, messages: nil, available_tools: nil, **params)
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
