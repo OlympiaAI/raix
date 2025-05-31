@@ -5,6 +5,7 @@ PATH
       activesupport (>= 6.0)
       faraday-retry (~> 2.0)
       open_router (~> 0.2)
+      ostruct
       ruby-openai (~> 7)
 
 GEM
@@ -97,6 +98,7 @@ GEM
       dotenv (>= 2)
       faraday (>= 1)
       faraday-multipart (>= 1)
+    ostruct (0.6.1)
     parallel (1.24.0)
     parser (3.3.0.5)
       ast (~> 2.4.1)
