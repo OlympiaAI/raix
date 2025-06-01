@@ -32,4 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday-retry", "~> 2.0"
   spec.add_dependency "open_router", "~> 0.2"
   spec.add_dependency "ruby-openai", "~> 7"
+  spec.add_dependency "ostruct"
 end
