@@ -1,6 +1,7 @@
 require_relative "tool"
 require "json"
 require "securerandom"
+require "digest"
 
 module Raix
   module MCP
@@ -57,7 +58,8 @@ module Raix
       end
 
       def unique_key
-        @args.join(" ").parameterize.underscore
+        parametrized_args = @args.join(" ").parameterize.underscore
+        Digest::SHA256.hexdigest(parametrized_args)[0..7]
       end
 
       private

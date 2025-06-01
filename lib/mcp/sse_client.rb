@@ -3,6 +3,7 @@ require "json"
 require "securerandom"
 require "faraday"
 require "uri"
+require "digest"
 
 module Raix
   module MCP
@@ -84,7 +85,8 @@ module Raix
       end
 
       def unique_key
-        @url.parameterize.underscore.gsub("https_", "")
+        parametrized_url = @url.parameterize.underscore.gsub("https_", "")
+        Digest::SHA256.hexdigest(parametrized_url)[0..7]
       end
 
       private

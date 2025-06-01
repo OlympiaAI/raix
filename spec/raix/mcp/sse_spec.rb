@@ -55,10 +55,12 @@ RSpec.describe Raix::MCP do
 
       # Print available tools for debugging
       tools = LiveMcpConsumer.functions.map { |f| f[:name] }
-      expect(tools).to include(:gitmcp_io_olympiaai_raix_docs_fetch_raix_documentation)
-      expect(tools).to include(:gitmcp_io_olympiaai_raix_docs_search_raix_documentation)
-      expect(tools).to include(:gitmcp_io_olympiaai_raix_docs_search_raix_code)
-      expect(tools).to include(:gitmcp_io_olympiaai_raix_docs_fetch_generic_url_content)
+
+      unique_key_hash = "7159ed50"
+      expect(tools).to include(:"#{unique_key_hash}_fetch_raix_documentation")
+      expect(tools).to include(:"#{unique_key_hash}_search_raix_documentation")
+      expect(tools).to include(:"#{unique_key_hash}_search_raix_code")
+      expect(tools).to include(:"#{unique_key_hash}_fetch_generic_url_content")
     end
 
     it "successfully calls a function on the GitMCP server", :novcr do
