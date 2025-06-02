@@ -59,7 +59,7 @@ module Raix
 
       def unique_key
         parametrized_args = @args.join(" ").parameterize.underscore
-        Digest::SHA256.hexdigest(parametrized_args)[0..7]
+        Digest::SHA256.hexdigest(parametrized_args)[0..2]
       end
 
       private

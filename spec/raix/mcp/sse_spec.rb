@@ -56,11 +56,11 @@ RSpec.describe Raix::MCP do
       # Print available tools for debugging
       tools = LiveMcpConsumer.functions.map { |f| f[:name] }
 
-      unique_key_hash = "7159ed50"
-      expect(tools).to include(:"#{unique_key_hash}_fetch_raix_documentation")
-      expect(tools).to include(:"#{unique_key_hash}_search_raix_documentation")
-      expect(tools).to include(:"#{unique_key_hash}_search_raix_code")
-      expect(tools).to include(:"#{unique_key_hash}_fetch_generic_url_content")
+      unique_key_hash = "715"
+      expect(tools).to include(:"fetch_raix_documentation_#{unique_key_hash}")
+      expect(tools).to include(:"search_raix_documentation_#{unique_key_hash}")
+      expect(tools).to include(:"search_raix_code_#{unique_key_hash}")
+      expect(tools).to include(:"fetch_generic_url_content_#{unique_key_hash}")
     end
 
     it "successfully calls a function on the GitMCP server", :novcr do

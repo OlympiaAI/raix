@@ -86,7 +86,7 @@ module Raix
 
       def unique_key
         parametrized_url = @url.parameterize.underscore.gsub("https_", "")
-        Digest::SHA256.hexdigest(parametrized_url)[0..7]
+        Digest::SHA256.hexdigest(parametrized_url)[0..2]
       end
 
       private
