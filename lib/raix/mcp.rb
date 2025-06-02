@@ -102,7 +102,7 @@ module Raix
         filtered_tools.each do |tool|
           remote_name = tool.name
           # TODO: Revisit later whether this much context is needed in the function name
-          local_name = "#{client.unique_key}_#{remote_name}".to_sym
+          local_name = "#{remote_name}_#{client.unique_key}".to_sym
 
           description = tool.description
           input_schema = tool.input_schema || {}
@@ -140,7 +140,7 @@ module Raix
                     id: call_id,
                     type: "function",
                     function: {
-                      name: remote_name,
+                      name: local_name.to_s,
                       arguments: arguments.to_json
                     }
                   }
@@ -149,7 +149,7 @@ module Raix
               {
                 role: "tool",
                 tool_call_id: call_id,
-                name: remote_name,
+                name: local_name.to_s,
                 content: content_text
               }
             ]

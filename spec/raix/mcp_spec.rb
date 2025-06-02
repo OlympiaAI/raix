@@ -326,3 +326,71 @@ RSpec.describe "MCP type coercion" do
     expect(result["bool4"]).to eq(false)
   end
 end
+
+RSpec.describe "MCP function name mapping" do
+  let(:test_class) do
+    Class.new do
+      include Raix::ChatCompletion
+      include Raix::MCP
+
+      attr_accessor :transcript
+
+      def initialize
+        @transcript = []
+      end
+
+      def self.name
+        "TestMcpFunctionNames"
+      end
+
+      def chat_completion_args
+        {}
+      end
+
+      def loop
+        false
+      end
+    end
+  end
+
+  it "uses local_name with prefix in transcript instead of remote_name" do
+    client_key = "client_key"
+    mock_tool = OpenStruct.new(
+      name: "get_data",
+      description: "Gets some data",
+      input_schema: {
+        "properties" => {
+          "id" => { "type" => "integer" }
+        }
+      }
+    )
+    mock_client = double("MCP::StdioClient",
+                         unique_key: client_key,
+                         close: nil,
+                         tools: [mock_tool])
+
+    data_result = "Data for ID 123"
+    allow(mock_client).to receive(:call_tool).with("get_data", id: 123).and_return(data_result)
+    test_class.mcp(client: mock_client)
+    instance = test_class.new
+
+    local_method_name = :get_data_client_key
+    expect(instance).to respond_to(local_method_name)
+
+    result = instance.send(local_method_name, { id: "123" }, nil)
+    expect(result).to eq(data_result)
+
+    expect(instance.transcript.size).to eq(1)
+    messages = instance.transcript[0]
+    expect(messages).to be_an(Array)
+    expect(messages.size).to eq(2)
+
+    assistant_msg = messages[0]
+    expect(assistant_msg[:role]).to eq("assistant")
+    expect(assistant_msg[:tool_calls][0][:function][:name]).to eq("get_data_#{client_key}")
+
+    tool_msg = messages[1]
+    expect(tool_msg[:role]).to eq("tool")
+    expect(tool_msg[:name]).to eq("get_data_#{client_key}")
+  end
+end
