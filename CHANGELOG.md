@@ -1,3 +1,11 @@
+## [0.9.2] - 2025-06-03
+### Fixed
+- Fixed OpenAI chat completion compatibility
+- Fixed SHA256 hexdigest generation for MCP tool names
+- Added ostruct as explicit dependency to prevent warnings
+- Fixed rubocop lint error for alphabetized gemspec dependencies
+- Updated default OpenRouter model
+
 ## [0.9.1] - 2025-05-30
 ### Added
 - **MCP Type Coercion** - Automatic type conversion for MCP tool arguments based on JSON schema
