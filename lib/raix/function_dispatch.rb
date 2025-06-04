@@ -100,7 +100,9 @@ module Raix
             }
           ]
 
-          chat_completion(**chat_completion_args) if loop
+          # Return the content - ChatCompletion will automatically continue
+          # the conversation after tool execution to get a final response
+          content
         end
       end
     end
@@ -114,11 +116,11 @@ module Raix
       super
     end
 
-    # Stops the looping of chat completion after function calls.
-    # Useful for manually halting processing in workflow components
-    # that do not require a final text response to an end user.
-    def stop_looping!
-      self.loop = false
+    # Stops the automatic continuation of chat completions after this function call.
+    # Useful when you want to halt processing within a function and force the AI
+    # to provide a text response without making additional tool calls.
+    def stop_tool_calls_and_respond!
+      @stop_tool_calls_and_respond = true
     end
 
     def tools

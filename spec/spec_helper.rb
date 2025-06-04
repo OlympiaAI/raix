@@ -34,17 +34,17 @@ retry_options = {
 OpenRouter.configure do |config|
   config.faraday do |f|
     f.request :retry, retry_options
-    f.response :logger, ::Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
+    f.response :logger, Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
       logger.filter(/(Bearer) (\S+)/, '\1[REDACTED]')
     end
   end
 end
 
 Raix.configure do |config|
-  config.openrouter_client = OpenRouter::Client.new(access_token: ENV["OR_ACCESS_TOKEN"])
-  config.openai_client = OpenAI::Client.new(access_token: ENV["OAI_ACCESS_TOKEN"]) do |f|
+  config.openrouter_client = OpenRouter::Client.new(access_token: ENV.fetch("OR_ACCESS_TOKEN", nil))
+  config.openai_client = OpenAI::Client.new(access_token: ENV.fetch("OAI_ACCESS_TOKEN", nil)) do |f|
     f.request :retry, retry_options
-    f.response :logger, ::Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
+    f.response :logger, Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
       logger.filter(/(Bearer) (\S+)/, '\1[REDACTED]')
     end
   end

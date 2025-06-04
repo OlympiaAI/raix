@@ -42,7 +42,7 @@ class WhatIsTheWeather
 end
 ```
 
-If the AI calls multiple functions at once, Raix handles them in sequence and returns an array of results. Call `stop_looping!` inside a function to end the loop.
+If the AI calls multiple functions at once, Raix handles them in sequence and returns an array of results. Call `stop_tool_calls_and_respond!` inside a function to end the loop.
 
 ## Prompt Declarations
 Include `Raix::PromptDeclarations` to define a chain of prompts in order. Each prompt can be inline text or a callable class that also includes `ChatCompletion`.

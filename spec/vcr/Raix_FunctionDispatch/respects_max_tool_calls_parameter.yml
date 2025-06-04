@@ -1,0 +1,147 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":"Check the weather for multiple
+        cities repeatedly"}],"model":"meta-llama/llama-3.3-8b-instruct:free","max_tokens":1000,"seed":9999,"temperature":0.0,"tools":[{"type":"function","function":{"name":"check_weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}},"description":"Check
+        the weather for a location"}}]}'
+    headers:
+      Authorization:
+      - Bearer REDACTED
+      Content-Type:
+      - application/json
+      X-Title:
+      - OpenRouter Ruby Client
+      Http-Referer:
+      - https://github.com/OlympiaAI/open_router
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 04 Jun 2025 19:30:00 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - 94a9d7a04b8669c0-DFW
+      Server:
+      - cloudflare
+      Access-Control-Allow-Origin:
+      - "*"
+      X-Clerk-Auth-Message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      X-Clerk-Auth-Reason:
+      - token-invalid
+      X-Clerk-Auth-Status:
+      - signed-out
+      Vary:
+      - Accept-Encoding
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n{\"id\":\"gen-1749065400-Z33udWegU7uCygjixl0o\",\"provider\":\"Meta\",\"model\":\"meta-llama/llama-3.3-8b-instruct:free\",\"object\":\"chat.completion\",\"created\":1749065400,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"tool_calls\",\"native_finish_reason\":\"tool_calls\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"\",\"refusal\":null,\"reasoning\":null,\"tool_calls\":[{\"index\":0,\"type\":\"function\",\"id\":\"4a146981-cfb9-45cf-8566-4e6c5b692bdd\",\"function\":{\"name\":\"check_weather\",\"arguments\":\"{\\\"location\\\":\\\"New
+        York\\\"}\"}},{\"index\":1,\"type\":\"function\",\"id\":\"7a6e229a-83f8-497e-93f3-d8cb6c6aa5da\",\"function\":{\"name\":\"check_weather\",\"arguments\":\"{\\\"location\\\":\\\"Los
+        Angeles\\\"}\"}},{\"index\":2,\"type\":\"function\",\"id\":\"e30fe3e1-f96e-431b-97ab-9a2659b3788c\",\"function\":{\"name\":\"check_weather\",\"arguments\":\"{\\\"location\\\":\\\"Chicago\\\"}\"}}]}}],\"usage\":{\"prompt_tokens\":212,\"completion_tokens\":22,\"total_tokens\":234}}"
+  recorded_at: Wed, 04 Jun 2025 19:30:00 GMT
+- request:
+    method: post
+    uri: https://openrouter.ai/api/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"messages":[{"role":"user","content":"Check the weather for multiple
+        cities repeatedly"},{"role":"system","content":"Maximum tool calls (2) exceeded.
+        Please provide a final response to the user without calling any more tools."}],"model":"meta-llama/llama-3.3-8b-instruct:free","max_tokens":1000,"seed":9999,"temperature":0.0}'
+    headers:
+      Authorization:
+      - Bearer REDACTED
+      Content-Type:
+      - application/json
+      X-Title:
+      - OpenRouter Ruby Client
+      Http-Referer:
+      - https://github.com/OlympiaAI/open_router
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Wed, 04 Jun 2025 19:30:02 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cf-Ray:
+      - 94a9d7a58b77e956-DFW
+      Server:
+      - cloudflare
+      Access-Control-Allow-Origin:
+      - "*"
+      X-Clerk-Auth-Message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      X-Clerk-Auth-Reason:
+      - token-invalid
+      X-Clerk-Auth-Status:
+      - signed-out
+      Vary:
+      - Accept-Encoding
+    body:
+      encoding: ASCII-8BIT
+      string: "\n         \n\n         \n\n         \n\n         \n\n         \n\n
+        \        \n{\"id\":\"gen-1749065401-X7R5XGC69xfPofILTfzf\",\"provider\":\"Meta\",\"model\":\"meta-llama/llama-3.3-8b-instruct:free\",\"object\":\"chat.completion\",\"created\":1749065401,\"choices\":[{\"logprobs\":null,\"finish_reason\":\"stop\",\"native_finish_reason\":\"stop\",\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"I
+        can provide a general solution on how to check the weather for multiple cities
+        repeatedly. \\n\\nTo achieve this, you can use a combination of APIs (Application
+        Programming Interfaces) that provide weather data and a programming language
+        to repeatedly fetch and display the weather information. Here's a high-level
+        approach:\\n\\n1. **Choose a weather API**: Select a reliable weather API
+        that supports fetching weather data for multiple cities. Some popular options
+        include OpenWeatherMap, WeatherAPI, and AccuWeather.\\n\\n2. **Set up API
+        keys**: Register for an account with the chosen API and obtain an API key.
+        This key is usually required to access the API's services.\\n\\n3. **Select
+        programming language**: Choose a programming language you're comfortable with
+        to write a script that can repeatedly fetch weather data. Python is a popular
+        choice due to its simplicity and extensive libraries.\\n\\n4. **Write the
+        script**:\\n    - Import necessary libraries (e.g., `requests` for HTTP requests
+        in Python).\\n    - Define a function to fetch the weather data for a given
+        city using the API.\\n    - Use a loop to repeatedly call this function for
+        each city.\\n    - Display the fetched weather data.\\n\\n5. **Schedule the
+        script**: To make the script run repeatedly, you can use a scheduler like
+        `schedule` in Python or `cron` jobs if you're on a Unix-like system.\\n\\nHere's
+        a simple Python example using the OpenWeatherMap API:\\n\\n```python\\nimport
+        requests\\nimport schedule\\nimport time\\n\\ndef get_weather(city, api_key):\\n
+        \   base_url = f\\\"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}\\\"\\n
+        \   response = requests.get(base_url)\\n    weather_data = response.json()\\n
+        \   print(f\\\"Weather in {city}: {weather_data['weather'][0]['description']}\\\")\\n\\n#
+        Replace 'YOUR_API_KEY' and 'city1', 'city2' with your actual API key and city
+        names\\napi_key = 'YOUR_API_KEY'\\ncities = ['city1', 'city2']\\n\\nfor city
+        in cities:\\n    get_weather(city, api_key)\\n\\n# Schedule the job to run
+        every hour\\ndef job():\\n    for city in cities:\\n        get_weather(city,
+        api_key)\\n\\nschedule.every(1).hours.do(job)  # Run job every 1 hour\\n\\nwhile
+        True:\\n    schedule.run_pending()\\n    time.sleep(1)\\n```\\n\\nThis example
+        is basic and may need adjustments based on the API's requirements and your
+        specific needs.\",\"refusal\":null,\"reasoning\":null}}],\"usage\":{\"prompt_tokens\":40,\"completion_tokens\":508,\"total_tokens\":548}}"
+  recorded_at: Wed, 04 Jun 2025 19:30:04 GMT
+recorded_with: VCR 6.2.0

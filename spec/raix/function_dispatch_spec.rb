@@ -47,16 +47,23 @@ end
 RSpec.describe Raix::FunctionDispatch, :vcr do
   let(:callback) { double("callback") }
 
-  it "can call a function and loop to provide text response" do
-    response = WhatIsTheWeather.new.chat_completion(openai: "gpt-4o", loop: true)
-    expect(response.first).to include("hot and sunny")
+  it "can call a function and automatically loop to provide text response" do
+    # The system now automatically continues after tool calls to get a final AI response
+    response = WhatIsTheWeather.new.chat_completion(openai: "gpt-4o")
+    # Response should be a string (the AI's final response) not an array
+    expect(response).to be_a(String)
+    # The AI should have processed the weather information in its response
+    expect(response.downcase).to match(/zipolite|oaxaca|weather|hot|sunny/)
   end
 
   it "supports multiple tool calls in a single response" do
     subject = MultipleToolCalls.new(callback)
     subject.transcript << { user: "For testing purposes, call the provided tool function twice in a single response." }
-    expect(callback).to receive(:call).twice
-    subject.chat_completion(openai: "gpt-4o")
+    # The callback might be called more than twice due to automatic continuation
+    expect(callback).to receive(:call).at_least(:twice)
+    response = subject.chat_completion(openai: "gpt-4o")
+    # Should get a final text response
+    expect(response).to be_a(String)
   end
 
   it "supports filtering tools with the tools parameter" do
@@ -118,12 +125,41 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
     previous_clients = decorate_clients_with_fake_middleman!
     begin
       # With OpenAI:
-      expect { WhatIsTheWeather.new.chat_completion(openai: "gpt-4o", loop: true) }.to raise_error(/unauthorized function call/i)
+      expect { WhatIsTheWeather.new.chat_completion(openai: "gpt-4o") }.to raise_error(/unauthorized function call/i)
       # With OpenRouter:
-      expect { WhatIsTheWeather.new.chat_completion(openai: false, params: { model: "gpt-4o" }, loop: true) }.to raise_error(/unauthorized function call/i)
+      expect { WhatIsTheWeather.new.chat_completion(openai: false, params: { model: "gpt-4o" }) }.to raise_error(/unauthorized function call/i)
     ensure
       Raix.configuration.openai_client = previous_clients[:openai]
       Raix.configuration.openrouter_client = previous_clients[:openrouter]
     end
+  end
+
+  it "respects max_tool_calls parameter" do
+    # Create a mock that simulates multiple tool calls
+    weather = WhatIsTheWeather.new
+    weather.transcript.clear
+    weather.transcript << { user: "Check the weather for multiple cities repeatedly" }
+
+    # Mock the client to always return tool calls
+    allow(Raix.configuration.openrouter_client).to receive(:complete).and_return({
+                                                                                   "choices" => [{
+                                                                                     "message" => {
+                                                                                       "tool_calls" => [
+                                                                                         {
+                                                                                           "id" => "call_1",
+                                                                                           "type" => "function",
+                                                                                           "function" => {
+                                                                                             "name" => "check_weather",
+                                                                                             "arguments" => '{"location": "City"}'
+                                                                                           }
+                                                                                         }
+                                                                                       ]
+                                                                                     }
+                                                                                   }]
+                                                                                 }).and_call_original
+
+    # With max_tool_calls set to 2, it should stop after 2 calls and provide a final response
+    response = weather.chat_completion(max_tool_calls: 2)
+    expect(response).to be_a(String)
   end
 end

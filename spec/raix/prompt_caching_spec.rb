@@ -6,17 +6,17 @@ class GettingRealAnthropic
   def initialize
     self.model = "anthropic/claude-3-haiku"
     transcript << {
-      "role": "system",
-      "content": [
+      role: "system",
+      content: [
         {
-          "type": "text",
-          "text": "You are a modern historian studying trends in modern business. You know the following book callsed 'Getting Real' very well:"
+          type: "text",
+          text: "You are a modern historian studying trends in modern business. You know the following book callsed 'Getting Real' very well:"
         },
         {
-          "type": "text",
-          "text": File.read("spec/files/getting_real.md"),
-          "cache_control": {
-            "type": "ephemeral"
+          type: "text",
+          text: File.read("spec/files/getting_real.md"),
+          cache_control: {
+            type: "ephemeral"
           }
         }
       ]

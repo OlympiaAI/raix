@@ -170,7 +170,7 @@ module PromptDeclarations
   protected
 
   # workaround for super.chat_completion, which is not available in ruby
-  def chat_completion_from_superclass(*args, **kargs)
-    method(:chat_completion).super_method.call(*args, **kargs)
+  def chat_completion_from_superclass(*, **kargs)
+    method(:chat_completion).super_method.call(*, **kargs)
   end
 end

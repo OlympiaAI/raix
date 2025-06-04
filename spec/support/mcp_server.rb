@@ -61,7 +61,7 @@ class TestMCPServer
 
   def handle_tools_list(id)
     tools_without_handlers = @tools.values.map do |tool|
-      tool.reject { |key, _| key == "handler" }
+      tool.except("handler")
     end
     create_response(id:, result: { tools: tools_without_handlers })
   end

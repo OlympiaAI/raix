@@ -257,9 +257,7 @@ module Raix
 
           if event[:error]
             raise ProtocolError, "SSE error: #{event[:error].message}"
-          elsif event[:id] == request_id && event[:result]
-            return event[:result]
-          elsif event[:result] && !event[:id]
+          elsif event[:result] && (event[:id] == request_id || !event[:id])
             return event[:result]
           else
             @event_queue << event

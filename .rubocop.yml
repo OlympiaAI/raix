@@ -1,6 +1,13 @@
 AllCops:
+  NewCops: enable
   SuggestExtensions: false
   TargetRubyVersion: 3.2.1
+
+Gemspec/RequireMFA:
+  Enabled: false
+
+Style/OpenStructUse:
+  Enabled: false
 
 Style/StringLiterals:
   Enabled: true

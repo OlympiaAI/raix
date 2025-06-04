@@ -24,7 +24,7 @@ jobs:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
     - name: Run the default task
-      run: bundle exec rake
+      run: bundle exec rake ci
       env:
         OR_ACCESS_TOKEN: ${{ secrets.OR_ACCESS_TOKEN }}
         OAI_ACCESS_TOKEN: ${{ secrets.OAI_ACCESS_TOKEN }}

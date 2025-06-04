@@ -11,32 +11,39 @@ require_relative "message_adapters/base"
 module Raix
   class UndeclaredToolError < StandardError; end
 
-  # The `ChatCompletion`` module is a Rails concern that provides a way to interact
+  # The `ChatCompletion` module is a Rails concern that provides a way to interact
   # with the OpenRouter Chat Completion API via its client. The module includes a few
   # methods that allow you to build a transcript of messages and then send them to
   # the API for completion. The API will return a response that you can use however
   # you see fit.
   #
-  # If the response includes a function call, the module will dispatch the function
-  # call and return the result. Which implies that function calls need to be defined
-  # on the class that includes this module. The `FunctionDispatch` module provides a
-  # Rails-like DSL for declaring and implementing tool functions at the top of your
-  # class instead of having to manually implement them as instance methods. The
-  # primary benefit of using the `FunctionDispatch` module is that it handles
-  # adding the function call results to the ongoing conversation transcript for you.
-  # It also triggers a new chat completion automatically if you've set the `loop`
-  # option to `true`, which is useful for implementing conversational chatbots that
-  # include tool calls.
+  # When the AI responds with tool function calls instead of a text message, this
+  # module automatically:
+  # 1. Executes the requested tool functions
+  # 2. Adds the function results to the conversation transcript
+  # 3. Sends the updated transcript back to the AI for another completion
+  # 4. Repeats this process until the AI responds with a regular text message
   #
-  # Note that some AI models can make more than a single tool function call in a
-  # single response. When that happens, the module will dispatch all of the function
-  # calls sequentially and return an array of results.
+  # This automatic continuation ensures that tool calls are seamlessly integrated
+  # into the conversation flow. The AI can use tool results to formulate its final
+  # response to the user. You can limit the number of tool calls using the
+  # `max_tool_calls` parameter to prevent excessive function invocations.
+  #
+  # Tool functions must be defined on the class that includes this module. The
+  # `FunctionDispatch` module provides a Rails-like DSL for declaring these
+  # functions at the class level, which is cleaner than implementing them as
+  # instance methods.
+  #
+  # Note that some AI models can make multiple tool function calls in a single
+  # response. When that happens, the module executes all requested functions
+  # before continuing the conversation.
   module ChatCompletion
     extend ActiveSupport::Concern
 
     attr_accessor :cache_at, :frequency_penalty, :logit_bias, :logprobs, :loop, :min_p, :model, :presence_penalty,
                   :prediction, :repetition_penalty, :response_format, :stream, :temperature, :max_completion_tokens,
-                  :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :available_tools, :tool_choice, :provider
+                  :max_tokens, :seed, :stop, :top_a, :top_k, :top_logprobs, :top_p, :tools, :available_tools, :tool_choice, :provider,
+                  :max_tool_calls, :stop_tool_calls_and_respond
 
     class_methods do
       # Returns the current configuration of this class. Falls back to global configuration for unset values.
@@ -58,14 +65,15 @@ module Raix
     # This method performs chat completion based on the provided transcript and parameters.
     #
     # @param params [Hash] The parameters for chat completion.
-    # @option loop [Boolean] :loop (false) Whether to loop the chat completion after function calls.
+    # @option loop [Boolean] :loop (false) DEPRECATED - The system now automatically continues after tool calls.
     # @option params [Boolean] :json (false) Whether to return the parse the response as a JSON object. Will search for <json> tags in the response first, then fall back to the default JSON parsing of the entire response.
     # @option params [String] :openai (nil) If non-nil, use OpenAI with the model specified in this param.
     # @option params [Boolean] :raw (false) Whether to return the raw response or dig the text content.
     # @option params [Array] :messages (nil) An array of messages to use instead of the transcript.
     # @option tools [Array|false] :available_tools (nil) Tools to pass to the LLM. Ignored if nil (default). If false, no tools are passed. If an array, only declared tools in the array are passed.
+    # @option max_tool_calls [Integer] :max_tool_calls Maximum number of tool calls before forcing a text response. Defaults to the configured value.
     # @return [String|Hash] The completed chat response.
-    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: nil, save_response: true, messages: nil, available_tools: nil)
+    def chat_completion(params: {}, loop: false, json: false, raw: false, openai: nil, save_response: true, messages: nil, available_tools: nil, max_tool_calls: nil)
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
@@ -108,8 +116,19 @@ module Raix
         end
       end
 
-      # used by FunctionDispatch
-      self.loop = loop
+      # Deprecation warning for loop parameter
+      if loop
+        warn "\n\nWARNING: The 'loop' parameter is DEPRECATED and will be ignored.\nChat completions now automatically continue after tool calls until the AI provides a text response.\nUse 'max_tool_calls' to limit the number of tool calls (default: #{configuration.max_tool_calls}).\n\n"
+      end
+
+      # Set max_tool_calls from parameter or configuration default
+      self.max_tool_calls = max_tool_calls || configuration.max_tool_calls
+
+      # Reset stop_tool_calls_and_respond flag
+      @stop_tool_calls_and_respond = false
+
+      # Track tool call count
+      tool_call_count = 0
 
       # set the model to the default if not provided
       self.model ||= configuration.model
@@ -143,13 +162,70 @@ module Raix
 
         tool_calls = response.dig("choices", 0, "message", "tool_calls") || []
         if tool_calls.any?
-          return tool_calls.map do |tool_call|
+          tool_call_count += tool_calls.size
+
+          # Check if we've exceeded max_tool_calls
+          if tool_call_count > self.max_tool_calls
+            # Add system message about hitting the limit
+            messages << { role: "system", content: "Maximum tool calls (#{self.max_tool_calls}) exceeded. Please provide a final response to the user without calling any more tools." }
+
+            # Force a final response without tools
+            params[:tools] = nil
+            response = if openai
+                         openai_request(params:, model: openai, messages:)
+                       else
+                         openrouter_request(params:, model:, messages:)
+                       end
+
+            # Process the final response
+            content = response.dig("choices", 0, "message", "content")
+            transcript << { assistant: content } if save_response
+            return raw ? response : content.strip
+          end
+
+          # Dispatch tool calls
+          tool_calls.each do |tool_call| # TODO: parallelize this?
             # dispatch the called function
-            arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
             function_name = tool_call["function"]["name"]
+            arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
             raise "Unauthorized function call: #{function_name}" unless self.class.functions.map { |f| f[:name].to_sym }.include?(function_name.to_sym)
 
             dispatch_tool_function(function_name, arguments.with_indifferent_access)
+          end
+
+          # After executing tool calls, we need to continue the conversation
+          # to let the AI process the results and provide a text response.
+          # We continue until the AI responds with a regular assistant message
+          # (not another tool call request), unless stop_tool_calls_and_respond! was called.
+
+          # Use the updated transcript for the next call, not the original messages
+          updated_messages = transcript.flatten.compact
+          last_message = updated_messages.last
+
+          if !@stop_tool_calls_and_respond && (last_message[:role] != "assistant" || last_message[:tool_calls].present?)
+            # Send the updated transcript back to the AI
+            return chat_completion(
+              params:,
+              json:,
+              raw:,
+              openai:,
+              save_response:,
+              messages: nil, # Use transcript instead
+              available_tools:,
+              max_tool_calls: self.max_tool_calls - tool_call_count
+            )
+          elsif @stop_tool_calls_and_respond
+            # If stop_tool_calls_and_respond was set, force a final response without tools
+            params[:tools] = nil
+            response = if openai
+                         openai_request(params:, model: openai, messages:)
+                       else
+                         openrouter_request(params:, model:, messages:)
+                       end
+
+            content = response.dig("choices", 0, "message", "content")
+            transcript << { assistant: content } if save_response
+            return raw ? response : content.strip
           end
         end
 
@@ -170,7 +246,7 @@ module Raix
         end
       rescue JSON::ParserError => e
         if e.message.include?("not a valid") # blank JSON
-          puts "Retrying blank JSON response... (#{retry_count} attempts) #{e.message}"
+          warn "Retrying blank JSON response... (#{retry_count} attempts) #{e.message}"
           retry_count += 1
           sleep 1 * retry_count # backoff
           retry if retry_count < 3
@@ -178,11 +254,11 @@ module Raix
           raise e # just fail if we can't get content after 3 attempts
         end
 
-        puts "Bad JSON received!!!!!!: #{content}"
+        warn "Bad JSON received!!!!!!: #{content}"
         raise e
       rescue Faraday::BadRequestError => e
         # make sure we see the actual error message on console or Honeybadger
-        puts "Chat completion failed!!!!!!!!!!!!!!!!: #{e.response[:body]}"
+        warn "Chat completion failed!!!!!!!!!!!!!!!!: #{e.response[:body]}"
         raise e
       end
     end
@@ -257,7 +333,7 @@ module Raix
         configuration.openrouter_client.complete(messages, model:, extras: params.compact, stream:)
       rescue OpenRouter::ServerError => e
         if e.message.include?("retry")
-          puts "Retrying OpenRouter request... (#{retry_count} attempts) #{e.message}"
+          warn "Retrying OpenRouter request... (#{retry_count} attempts) #{e.message}"
           retry_count += 1
           sleep 1 * retry_count # backoff
           retry if retry_count < 5
