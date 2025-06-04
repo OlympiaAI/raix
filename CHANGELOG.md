@@ -12,7 +12,6 @@
 ### Changed
 - ChatCompletion handles continuation after tool function calls automatically.
 - Improved CI/CD workflow to use `bundle exec rake ci` for consistent testing.
-- Added `rubygems_mfa_required` metadata to gemspec for enhanced security.
 
 ### Fixed
 - Resolved conflict between `loop` attribute and Ruby's `Kernel.loop` method (fixes #11).
