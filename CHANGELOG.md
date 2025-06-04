@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.0.0] - 2025-06-04
 ### Breaking Changes
 - **Deprecated `loop` parameter in ChatCompletion** - The system now automatically continues conversations after tool calls until the AI provides a text response. The `loop` parameter shows a deprecation warning but still works for backwards compatibility.
 - **Tool-based completions now return strings instead of arrays** - When functions are called, the final response is a string containing the AI's text response, not an array of function results.
