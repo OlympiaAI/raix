@@ -107,9 +107,15 @@ When using JSON mode with non-OpenAI providers, Raix automatically sets the `req
 
 ### Use of Tools/Functions
 
-The second (optional) module that you can add to your Ruby classes after `ChatCompletion` is `FunctionDispatch`. It lets you declare and implement functions to be called at the AI's discretion as part of a chat completion "loop" in a declarative, Rails-like "DSL" fashion.
+The second (optional) module that you can add to your Ruby classes after `ChatCompletion` is `FunctionDispatch`. It lets you declare and implement functions to be called at the AI's discretion in a declarative, Rails-like "DSL" fashion.
 
-Most end-user facing AI components that include functions should be invoked using `chat_completion(loop: true)`, so that the results of each function call are added to the transcript and chat completion is triggered again. The looping will continue until the AI generates a plain text response.
+When the AI responds with tool function calls instead of a text message, Raix automatically:
+1. Executes the requested tool functions
+2. Adds the function results to the conversation transcript  
+3. Sends the updated transcript back to the AI for another completion
+4. Repeats this process until the AI responds with a regular text message
+
+This automatic continuation ensures that tool calls are seamlessly integrated into the conversation flow. The AI can use tool results to formulate its final response to the user. You can limit the number of tool calls using the `max_tool_calls` parameter to prevent excessive function invocations.
 
 ```ruby
 class WhatIsTheWeather
@@ -126,9 +132,9 @@ end
 RSpec.describe WhatIsTheWeather do
   subject { described_class.new }
 
-  it "can call a function and loop to provide text response" do
+  it "provides a text response after automatically calling weather function" do
     subject.transcript << { user: "What is the weather in Zipolite, Oaxaca?" }
-    response = subject.chat_completion(openai: "gpt-4o", loop: true)
+    response = subject.chat_completion(openai: "gpt-4o")
     expect(response).to include("hot and sunny")
   end
 end
@@ -264,9 +270,23 @@ This is particularly useful for:
 - Resource-intensive computations
 - Functions with deterministic outputs for the same inputs
 
-#### Manually Stopping a Loop
+#### Limiting Tool Calls
 
-To loop AI components that don't interact with end users, at least one function block should invoke `stop_looping!` whenever you're ready to stop processing.
+You can control the maximum number of tool calls before the AI must provide a text response:
+
+```ruby
+# Limit to 5 tool calls (default is 25)
+response = my_ai.chat_completion(max_tool_calls: 5)
+
+# Configure globally
+Raix.configure do |config|
+  config.max_tool_calls = 10
+end
+```
+
+#### Manually Stopping Tool Calls
+
+For AI components that process tasks without end-user interaction, you can use `stop_tool_calls_and_respond!` within a function to force the AI to provide a text response without making additional tool calls.
 
 ```ruby
 class OrderProcessor
@@ -285,8 +305,8 @@ class OrderProcessor
   end
 
   def perform
-    # will continue looping until `stop_looping!` is called
-    chat_completion(loop: true)
+    # will automatically continue after tool calls until finished_processing is called
+    chat_completion
   end
 
 
@@ -317,7 +337,8 @@ class OrderProcessor
 
   function :finished_processing do
     order.update!(transcript:, processed_at: Time.current)
-    stop_looping!
+    stop_tool_calls_and_respond!
+    "Order processing completed successfully"
   end
 end
 ```

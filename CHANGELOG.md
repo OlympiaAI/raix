@@ -1,3 +1,24 @@
+## [Unreleased]
+### Breaking Changes
+- **Deprecated `loop` parameter in ChatCompletion** - The system now automatically continues conversations after tool calls until the AI provides a text response. The `loop` parameter shows a deprecation warning but still works for backwards compatibility.
+- **Tool-based completions now return strings instead of arrays** - When functions are called, the final response is a string containing the AI's text response, not an array of function results.
+- **`stop_looping!` renamed to `stop_tool_calls_and_respond!`** - Better reflects the new automatic continuation behavior.
+
+### Added
+- **Automatic conversation continuation** - Chat completions automatically continue after tool execution without needing the `loop` parameter.
+- **`max_tool_calls` parameter** - Controls the maximum number of tool invocations to prevent infinite loops (default: 25).
+- **Configuration for `max_tool_calls`** - Added `max_tool_calls` to the Configuration class with sensible defaults.
+
+### Changed
+- ChatCompletion handles continuation after tool function calls automatically.
+- Improved CI/CD workflow to use `bundle exec rake ci` for consistent testing.
+- Added `rubygems_mfa_required` metadata to gemspec for enhanced security.
+
+### Fixed
+- Resolved conflict between `loop` attribute and Ruby's `Kernel.loop` method (fixes #11).
+- Fixed various RuboCop warnings using keyword argument forwarding.
+- Improved error handling with proper warning messages instead of puts.
+
 ## [0.9.2] - 2025-06-03
 ### Fixed
 - Fixed OpenAI chat completion compatibility

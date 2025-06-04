@@ -37,39 +37,39 @@ RSpec.describe Raix::ResponseFormat do
 
       expect(described_class.new("observations", schema)).to serialize_to(
         {
-          "type": "json_schema",
-          "json_schema": {
-            "name": "observations",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "observations": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "brief": {
-                        "type": "string",
-                        "description": "brief description of the observation"
+          type: "json_schema",
+          json_schema: {
+            name: "observations",
+            schema: {
+              type: "object",
+              properties: {
+                observations: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      brief: {
+                        type: "string",
+                        description: "brief description of the observation"
                       },
-                      "content": {
-                        "type": "string",
-                        "description": "content of the observation"
+                      content: {
+                        type: "string",
+                        description: "content of the observation"
                       },
-                      "importance": {
-                        "type": "integer",
-                        "description": "importance of the observation"
+                      importance: {
+                        type: "integer",
+                        description: "importance of the observation"
                       }
                     },
-                    "required": %w[brief content importance],
-                    "additionalProperties": false
+                    required: %w[brief content importance],
+                    additionalProperties: false
                   }
                 }
               },
-              "required": ["observations"],
-              "additionalProperties": false
+              required: ["observations"],
+              additionalProperties: false
             },
-            "strict": true
+            strict: true
           }
         }
       )
@@ -85,23 +85,23 @@ RSpec.describe Raix::ResponseFormat do
 
       expect(described_class.new("PersonInfo", schema)).to serialize_to(
         {
-          "type": "json_schema",
-          "json_schema": {
-            "name": "PersonInfo",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
+          type: "json_schema",
+          json_schema: {
+            name: "PersonInfo",
+            schema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string"
                 },
-                "age": {
-                  "type": "integer"
+                age: {
+                  type: "integer"
                 }
               },
-              "required": %w[name age],
-              "additionalProperties": false
+              required: %w[name age],
+              additionalProperties: false
             },
-            "strict": true
+            strict: true
           }
         }
       )
@@ -126,50 +126,50 @@ RSpec.describe Raix::ResponseFormat do
 
       expect(described_class.new("CompanyInfo", schema)).to serialize_to(
         {
-          "type": "json_schema",
-          "json_schema": {
-            "name": "CompanyInfo",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "company": {
-                  "name": {
-                    "type": "string"
+          type: "json_schema",
+          json_schema: {
+            name: "CompanyInfo",
+            schema: {
+              type: "object",
+              properties: {
+                company: {
+                  name: {
+                    type: "string"
                   },
-                  "employees": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "name": {
-                          "type": "string"
+                  employees: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        name: {
+                          type: "string"
                         },
-                        "role": {
-                          "type": "string"
+                        role: {
+                          type: "string"
                         },
-                        "skills": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
+                        skills: {
+                          type: "array",
+                          items: {
+                            type: "string"
                           }
                         }
                       },
-                      "required": [],
-                      "additionalProperties": false
+                      required: [],
+                      additionalProperties: false
                     }
                   },
-                  "locations": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
+                  locations: {
+                    type: "array",
+                    items: {
+                      type: "string"
                     }
                   }
                 }
               },
-              "required": ["company"],
-              "additionalProperties": false
+              required: ["company"],
+              additionalProperties: false
             },
-            "strict": true
+            strict: true
           }
         }
       )
@@ -186,29 +186,29 @@ RSpec.describe Raix::ResponseFormat do
 
       expect(described_class.new("PersonAnalysis", schema)).to serialize_to(
         {
-          "type": "json_schema",
-          "json_schema": {
-            "name": "PersonAnalysis",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "full_name": {
-                  "type": "string"
+          type: "json_schema",
+          json_schema: {
+            name: "PersonAnalysis",
+            schema: {
+              type: "object",
+              properties: {
+                full_name: {
+                  type: "string"
                 },
-                "age_estimate": {
-                  "type": "integer"
+                age_estimate: {
+                  type: "integer"
                 },
-                "personality_traits": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+                personality_traits: {
+                  type: "array",
+                  items: {
+                    type: "string"
                   }
                 }
               },
-              "required": %w[full_name age_estimate personality_traits],
-              "additionalProperties": false
+              required: %w[full_name age_estimate personality_traits],
+              additionalProperties: false
             },
-            "strict": true
+            strict: true
           }
         }
       )

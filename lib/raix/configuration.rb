@@ -36,10 +36,15 @@ module Raix
     # The openai_client option determines the OpenAI client to use for communication.
     attr_accessor_with_fallback :openai_client
 
+    # The max_tool_calls option determines the maximum number of tool calls
+    # before forcing a text response to prevent excessive function invocations.
+    attr_accessor_with_fallback :max_tool_calls
+
     DEFAULT_MAX_TOKENS = 1000
     DEFAULT_MAX_COMPLETION_TOKENS = 16_384
     DEFAULT_MODEL = "meta-llama/llama-3.3-8b-instruct:free"
     DEFAULT_TEMPERATURE = 0.0
+    DEFAULT_MAX_TOOL_CALLS = 25
 
     # Initializes a new instance of the Configuration class with default values.
     def initialize(fallback: nil)
@@ -47,6 +52,7 @@ module Raix
       self.max_completion_tokens = DEFAULT_MAX_COMPLETION_TOKENS
       self.max_tokens = DEFAULT_MAX_TOKENS
       self.model = DEFAULT_MODEL
+      self.max_tool_calls = DEFAULT_MAX_TOOL_CALLS
       self.fallback = fallback
     end
 

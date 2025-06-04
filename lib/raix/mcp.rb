@@ -102,7 +102,7 @@ module Raix
         filtered_tools.each do |tool|
           remote_name = tool.name
           # TODO: Revisit later whether this much context is needed in the function name
-          local_name = "#{remote_name}_#{client.unique_key}".to_sym
+          local_name = :"#{remote_name}_#{client.unique_key}"
 
           description = tool.description
           input_schema = tool.input_schema || {}
@@ -154,9 +154,8 @@ module Raix
               }
             ]
 
-            # Continue the chat loop if requested (same semantics as FunctionDispatch)
-            chat_completion(**chat_completion_args) if loop
-
+            # Return the content - ChatCompletion will automatically continue
+            # the conversation after tool execution
             content_text
           end
         end
