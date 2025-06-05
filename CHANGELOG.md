@@ -1,3 +1,13 @@
+## [1.0.1] - 2025-06-04
+### Fixed
+- Fixed PromptDeclarations module namespace - now properly namespaced under Raix
+- Removed Rails.logger dependencies from PromptDeclarations for non-Rails environments
+- Fixed documentation example showing incorrect `openai: true` usage (should be model string)
+- Added comprehensive tests for PromptDeclarations module
+
+### Changed
+- Improved error handling in PromptDeclarations to catch StandardError instead of generic rescue
+
 ## [1.0.0] - 2025-06-04
 ### Breaking Changes
 - **Deprecated `loop` parameter in ChatCompletion** - The system now automatically continues conversations after tool calls until the AI provides a text response. The `loop` parameter shows a deprecation warning but still works for backwards compatibility.
