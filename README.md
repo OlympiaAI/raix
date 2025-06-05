@@ -460,7 +460,7 @@ class CustomPromptExample
 
   # Prompt using OpenAI directly
   prompt text: "Use OpenAI",
-        openai: true
+        openai: "gpt-4o"
 end
 ```
 
