@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in raix-rails.gemspec
+# Specify your gem's dependencies in raix.gemspec
 gemspec
 
 group :development do
