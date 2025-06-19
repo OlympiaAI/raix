@@ -713,12 +713,27 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 If you are using the default OpenRouter API, Raix expects `Raix.configuration.openrouter_client` to initialized with the OpenRouter API client instance.
 
-You can add an initializer to your application's `config/initializers` directory:
+You can add an initializer to your application's `config/initializers` directory that looks like this example (setting up both providers, OpenRouter and OpenAI):
 
 ```ruby
   # config/initializers/raix.rb
+  OpenRouter.configure do |config|
+    config.faraday do |f|
+      f.request :retry, retry_options
+      f.response :logger, Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
+        logger.filter(/(Bearer) (\S+)/, '\1[REDACTED]')
+      end
+    end
+  end
+
   Raix.configure do |config|
-    config.openrouter_client = OpenRouter::Client.new
+    config.openrouter_client = OpenRouter::Client.new(access_token: ENV.fetch("OR_ACCESS_TOKEN", nil))
+    config.openai_client = OpenAI::Client.new(access_token: ENV.fetch("OAI_ACCESS_TOKEN", nil)) do |f|
+      f.request :retry, retry_options
+      f.response :logger, Logger.new($stdout), { headers: true, bodies: true, errors: true } do |logger|
+        logger.filter(/(Bearer) (\S+)/, '\1[REDACTED]')
+      end
+    end
   end
 ```
 
