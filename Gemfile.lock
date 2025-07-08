@@ -6,7 +6,7 @@ PATH
       faraday-retry (~> 2.0)
       open_router (~> 0.2)
       ostruct
-      ruby-openai (~> 7)
+      ruby-openai (~> 8.1)
 
 GEM
   remote: https://rubygems.org/
@@ -148,7 +148,7 @@ GEM
       unicode-display_width (>= 2.4.0, < 3.0)
     rubocop-ast (1.31.2)
       parser (>= 3.3.0.4)
-    ruby-openai (7.1.0)
+    ruby-openai (8.1.0)
       event_stream_parser (>= 0.3.0, < 2.0.0)
       faraday (>= 1)
       faraday-multipart (>= 1)
