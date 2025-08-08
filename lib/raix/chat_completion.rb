@@ -318,7 +318,7 @@ module Raix
       params[:stream] ||= stream.presence
       params[:stream_options] = { include_usage: true } if params[:stream]
 
-      params.delete(:temperature) if model.start_with?("o")
+      params.delete(:temperature) if model.start_with?("o") || model.include?("gpt-5")
 
       configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
     end
@@ -328,6 +328,8 @@ module Raix
       params.delete(:max_completion_tokens)
 
       retry_count = 0
+
+      params.delete(:temperature) if model.start_with?("openai/o") || model.include?("gpt-5")
 
       begin
         configuration.openrouter_client.complete(messages, model:, extras: params.compact, stream:)
