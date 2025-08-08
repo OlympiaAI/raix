@@ -1,3 +1,13 @@
+## [1.0.2] - 2025-07-16
+### Added
+- Added method to check for API client availability in Configuration
+
+### Changed
+- Updated ruby-openai dependency to ~> 8.1
+
+### Fixed
+- Fixed gemspec file reference
+
 ## [1.0.1] - 2025-06-04
 ### Fixed
 - Fixed PromptDeclarations module namespace - now properly namespaced under Raix
