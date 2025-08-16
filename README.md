@@ -111,7 +111,7 @@ The second (optional) module that you can add to your Ruby classes after `ChatCo
 
 When the AI responds with tool function calls instead of a text message, Raix automatically:
 1. Executes the requested tool functions
-2. Adds the function results to the conversation transcript  
+2. Adds the function results to the conversation transcript
 3. Sends the updated transcript back to the AI for another completion
 4. Repeats this process until the AI responds with a regular text message
 
@@ -738,6 +738,13 @@ You can add an initializer to your application's `config/initializers` directory
 ```
 
 You will also need to configure the OpenRouter API access token as per the instructions here: https://github.com/OlympiaAI/open_router?tab=readme-ov-file#quickstart
+
+### Custom Providers
+
+You may register custom providers instead of either of the above by registering an object that responds
+to `request(params:, model:, messages:)` and returns a OpenAI compatible chat completion response.
+
+See the [OpenAIProvider implementation](/OlympiaAI/raix/blob/main/lib/raix/providers/openai_provider.rb) for the OpenAI compatible provider implementation.
 
 ### Global vs class level configuration
 

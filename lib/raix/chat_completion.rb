@@ -146,7 +146,7 @@ module Raix
         response = if openai
                      openai_request(params:, model: openai, messages:)
                    else
-                     openrouter_request(params:, model:, messages:)
+                     provider_request(params:, model:, messages:)
                    end
         retry_count = 0
         content = nil
@@ -174,7 +174,7 @@ module Raix
             response = if openai
                          openai_request(params:, model: openai, messages:)
                        else
-                         openrouter_request(params:, model:, messages:)
+                         provider_request(params:, model:, messages:)
                        end
 
             # Process the final response
@@ -220,7 +220,7 @@ module Raix
             response = if openai
                          openai_request(params:, model: openai, messages:)
                        else
-                         openrouter_request(params:, model:, messages:)
+                         provider_request(params:, model:, messages:)
                        end
 
             content = response.dig("choices", 0, "message", "content")
@@ -308,41 +308,23 @@ module Raix
     end
 
     def openai_request(params:, model:, messages:)
-      if params[:prediction]
-        params.delete(:max_completion_tokens)
-      else
-        params[:max_completion_tokens] ||= params[:max_tokens]
-        params.delete(:max_tokens)
-      end
-
       params[:stream] ||= stream.presence
-      params[:stream_options] = { include_usage: true } if params[:stream]
+      provider = configuration.provider(:openai)
+      raise "OpenAI provider not configured. Use configuration.openai_client = OpenAI::Client.new" unless provider
 
-      params.delete(:temperature) if model.start_with?("o") || model.include?("gpt-5")
-
-      configuration.openai_client.chat(parameters: params.compact.merge(model:, messages:))
+      provider.request(params:, model:, messages:)
     end
 
-    def openrouter_request(params:, model:, messages:)
-      # max_completion_tokens is not supported by OpenRouter
-      params.delete(:max_completion_tokens)
+    def provider_request(params:, model:, messages:)
+      params[:stream] ||= stream.presence
 
-      retry_count = 0
+      # If openrouter is set, use it and pass provider as a parameter
+      # Otherwise, use provider to select the provider from the registry
+      provider = configuration.provider(:openrouter) || configuration.provider(params.delete(:provider))
 
-      params.delete(:temperature) if model.start_with?("openai/o") || model.include?("gpt-5")
+      raise "No provider configured." unless provider
 
-      begin
-        configuration.openrouter_client.complete(messages, model:, extras: params.compact, stream:)
-      rescue OpenRouter::ServerError => e
-        if e.message.include?("retry")
-          warn "Retrying OpenRouter request... (#{retry_count} attempts) #{e.message}"
-          retry_count += 1
-          sleep 1 * retry_count # backoff
-          retry if retry_count < 5
-        end
-
-        raise e
-      end
+      provider.request(params:, model:, messages:)
     end
   end
 end
