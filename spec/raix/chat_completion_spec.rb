@@ -22,6 +22,18 @@ class TestClassLevelConfiguration
   end
 end
 
+class TestOveriddenConfiguration
+  include Raix::ChatCompletion
+
+  # Override the configuration accessor to make testing non-global
+  attr_accessor :configuration
+
+  def initialize
+    self.model = "test-model"
+    transcript << { user: "What is the meaning of life?" }
+  end
+end
+
 RSpec.describe MeaningOfLife, :vcr do
   subject { described_class.new }
 
@@ -65,5 +77,57 @@ RSpec.describe TestClassLevelConfiguration do
       expect(params[:model]).to eq("drama-llama")
     end.and_return({ "choices" => [{ "message" => { "content" => "The meaning of life is to find your own meaning." } }] })
     subject.chat_completion
+  end
+end
+
+RSpec.describe "Provider parameter behavior" do
+  context "when openrouter_client is set" do
+    it "passes provider as a parameter to openrouter" do
+      mock_openrouter = instance_double("OpenRouter::Client")
+      expect(mock_openrouter).to receive(:complete).with(
+        anything,
+        model: "test-model",
+        extras: hash_including(provider: "anthropic"),
+        stream: anything
+      ).and_return("choices" => [{ "message" => { "content" => "42" } }])
+
+      chat_client = TestOveriddenConfiguration.new
+      chat_client.configuration = Raix::Configuration.new
+      chat_client.configuration.openrouter_client = mock_openrouter
+      chat_client.provider = "anthropic"
+
+      expect(chat_client.chat_completion).to eq("42")
+    end
+  end
+
+  context "when openrouter_client is not set" do
+    it "uses provider parameter to select the registered provider" do
+      mock_provider = instance_double("CustomProvider")
+      expect(mock_provider).to receive(:request).with(
+        params: hash_not_including(:provider),
+        model: "test-model",
+        messages: anything
+      ).and_return("choices" => [{ "message" => { "content" => "42" } }])
+
+      chat_client = TestOveriddenConfiguration.new
+      chat_client.configuration = Raix::Configuration.new
+      chat_client.configuration.register_provider(:custom, mock_provider)
+      chat_client.provider = :custom
+
+      expect(chat_client.chat_completion).to eq("42")
+    end
+  end
+
+  context "when openrouter_client is not set and provider is not found" do
+    it "raises error" do
+      chat_client = TestOveriddenConfiguration.new
+      chat_client.configuration = Raix::Configuration.new
+      chat_client.provider = :nonexistent
+
+      expect { chat_client.chat_completion }.to raise_error(
+        RuntimeError,
+        "No provider configured."
+      )
+    end
   end
 end
