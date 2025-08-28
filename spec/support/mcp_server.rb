@@ -10,6 +10,7 @@ class TestMCPServer
   def initialize
     $stdout.sync = true # Enable auto-flushing for immediate output
     @tools = build_tools
+    @initialized = false
   end
 
   def run
@@ -49,7 +50,17 @@ class TestMCPServer
     params = request["params"] || {}
     id = request["id"]
 
+    # Check if server is initialized for non-initialization methods
+    if !@initialized && method != "initialize" && method != "notifications/initialized"
+      return create_error_response(id, -32_002, "Server not initialized. Please call 'initialize' first.")
+    end
+
     case method
+    when "initialize"
+      handle_initialize(id, params)
+    when "notifications/initialized"
+      # Notifications don't require a response
+      nil
     when "tools/list"
       handle_tools_list(id)
     when "tools/call"
@@ -57,6 +68,32 @@ class TestMCPServer
     else
       create_error_response(id, -32_601, "Method not found: #{method}")
     end
+  end
+
+  def handle_initialize(id, params)
+    # Validate protocol version
+    protocol_version = params["protocolVersion"]
+    unless protocol_version == "2024-11-05"
+      return create_error_response(id, -32_602, "Unsupported protocol version: #{protocol_version}")
+    end
+
+    # Mark server as initialized
+    @initialized = true
+
+    create_response(id:, result: {
+                      protocolVersion: "2024-11-05",
+                      capabilities: {
+                        tools: {
+                          listChanged: true
+                        },
+                        prompts: {},
+                        resources: {}
+                      },
+                      serverInfo: {
+                        name: "Test MCP Server",
+                        version: "1.0.0"
+                      }
+                    })
   end
 
   def handle_tools_list(id)

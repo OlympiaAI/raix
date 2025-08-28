@@ -2,15 +2,22 @@ require_relative "tool"
 require "json"
 require "securerandom"
 require "digest"
+require "raix/version"
 
 module Raix
   module MCP
     # Client for communicating with MCP servers via stdio using JSON-RPC.
     class StdioClient
+      PROTOCOL_VERSION = "2024-11-05".freeze
+      JSONRPC_VERSION = "2.0".freeze
+
       # Creates a new client with a bidirectional pipe to the MCP server.
       def initialize(*args, env)
         @args = args
         @io = IO.popen(env, args, "w+")
+
+        # Initialize the MCP session
+        initialize_mcp_session
       end
 
       # Returns available tools from the server.
@@ -63,6 +70,33 @@ module Raix
       end
 
       private
+
+      # Initialize the MCP session according to the MCP lifecycle
+      def initialize_mcp_session
+        result = call(
+          "initialize",
+          protocolVersion: PROTOCOL_VERSION,
+          capabilities: {
+            roots: {},
+            sampling: {}
+          },
+          clientInfo: {
+            name: "Raix",
+            version: Raix::VERSION
+          }
+        )
+
+        # Send initialized notification if the server supports tool list changes
+        return unless result.dig("capabilities", "tools", "listChanged")
+
+        send_notification("notifications/initialized", {})
+      end
+
+      # Sends a notification (no response expected)
+      def send_notification(method, params = {})
+        @io.puts({ method:, params:, jsonrpc: JSONRPC_VERSION }.to_json)
+        @io.flush
+      end
 
       # Sends JSON-RPC request and returns the result.
       def call(method, **params)

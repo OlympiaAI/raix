@@ -4,7 +4,6 @@ require "spec_helper"
 
 RSpec.describe Raix::MCP::StdioClient do
   let(:test_server_path) { File.join(__dir__, "../../support/mcp_server.rb") }
-  let(:client) { described_class.new("ruby", test_server_path, {}) }
 
   before do
     # Ensure the test server exists
@@ -12,7 +11,15 @@ RSpec.describe Raix::MCP::StdioClient do
   end
 
   after do
-    client&.close
+    # Only close if client was created and we're not in a mocked test
+    if instance_variable_defined?(:@client)
+      @client&.close
+    end
+  end
+
+  # Helper method to create and track the client
+  def client
+    @client ||= described_class.new("ruby", test_server_path, {})
   end
 
   describe "#initialize" do
@@ -147,7 +154,13 @@ RSpec.describe Raix::MCP::StdioClient do
       allow(IO).to receive(:popen).and_return(io_mock)
       allow(io_mock).to receive(:puts)
       allow(io_mock).to receive(:flush)
-      allow(io_mock).to receive(:gets).and_return('{"jsonrpc":"2.0","id":"test","error":{"code":-32601,"message":"Method not found"}}')
+
+      # First return success for initialization, then error for tools/list
+      allow(io_mock).to receive(:gets).and_return(
+        '{"jsonrpc":"2.0","id":"test","result":{"capabilities":{}}}',
+        '{"jsonrpc":"2.0","id":"test","error":{"code":-32601,"message":"Method not found"}}'
+      )
+
       allow(io_mock).to receive(:close)
 
       test_client = described_class.new("ruby", test_server_path, {})
