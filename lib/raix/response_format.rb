@@ -44,6 +44,8 @@ module Raix
       }
     end
 
+    alias :as_json :to_schema
+
     private
 
     def decode(input)
