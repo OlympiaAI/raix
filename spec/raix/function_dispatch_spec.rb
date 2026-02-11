@@ -89,46 +89,15 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
     expect(params[:required]).not_to include(:path)
   end
 
-  # This simulates a middleman on the network that rewrites the function name to anything else
-  def decorate_clients_with_fake_middleman!
-    result = { openai: Raix.configuration.openai_client, openrouter: Raix.configuration.openrouter_client }
-    mocked_middleman =
-      Class.new(SimpleDelegator) do
-        def chat(...)
-          __getobj__.chat(...).tap do |result|
-            result.dig("choices", 0, "message", "tool_calls")&.each do |tool_call|
-              tool_call["function"]["name"] = "non_exposed_method"
-            end
-          end
-        end
-
-        def complete(...)
-          __getobj__.complete(...).tap do |result|
-            result.dig("choices", 0, "message", "tool_calls")&.each do |tool_call|
-              tool_call["function"]["name"] = "non_exposed_method"
-            end
-          end
-        end
-      end
-    Raix.configuration.openai_client = mocked_middleman.new(Raix.configuration.openai_client)
-    Raix.configuration.openrouter_client = mocked_middleman.new(Raix.configuration.openrouter_client)
-    result
-  end
-
   # Since we are using the send method to execute tools calls, we have to make sure
   # that the method was explicitly defined as a tool function.
   #
   # Otherwise, a middleman on the network could rewrite the method name to anything else and execute
   # arbitrary code from the class.
   it "does not allow non exposed methods to be called" do
-    # With RubyLLM, the security is still enforced in ChatCompletion#chat_completion
-    # when it checks if the function name is in self.class.functions
-    # We test this by directly simulating what would happen if a middleman changed the response
-
     weather = WhatIsTheWeather.new
 
     # Simulate what chat_completion does when it receives a tool call
-    # This mimics the check at line 191 in chat_completion.rb
     fake_tool_call = { "function" => { "name" => "non_exposed_method", "arguments" => "{}" } }
     function_name = fake_tool_call["function"]["name"]
     allowed_functions = weather.class.functions.map { |f| f[:name].to_sym }
@@ -139,31 +108,44 @@ RSpec.describe Raix::FunctionDispatch, :vcr do
   end
 
   it "respects max_tool_calls parameter" do
-    # Create a mock that simulates multiple tool calls
     weather = WhatIsTheWeather.new
     weather.transcript.clear
     weather.transcript << { user: "Check the weather for multiple cities repeatedly" }
 
-    # Mock the client to always return tool calls
-    allow(Raix.configuration.openrouter_client).to receive(:complete).and_return({
-                                                                                   "choices" => [{
-                                                                                     "message" => {
-                                                                                       "tool_calls" => [
-                                                                                         {
-                                                                                           "id" => "call_1",
-                                                                                           "type" => "function",
-                                                                                           "function" => {
-                                                                                             "name" => "check_weather",
-                                                                                             "arguments" => '{"location": "City"}'
-                                                                                           }
-                                                                                         }
-                                                                                       ]
-                                                                                     }
-                                                                                   }]
-                                                                                 }).and_call_original
+    tool_call_response = lambda do |id|
+      {
+        "choices" => [{
+          "message" => {
+            "role" => "assistant",
+            "content" => nil,
+            "tool_calls" => [
+              {
+                "id" => id,
+                "type" => "function",
+                "function" => {
+                  "name" => "check_weather",
+                  "arguments" => '{"location":"City"}'
+                }
+              }
+            ]
+          },
+          "finish_reason" => "tool_calls"
+        }]
+      }
+    end
 
-    # With max_tool_calls set to 2, it should stop after 2 calls and provide a final response
-    response = weather.chat_completion(max_tool_calls: 2)
+    final_response = {
+      "choices" => [{
+        "message" => { "role" => "assistant", "content" => "Final answer without more tools", "tool_calls" => nil },
+        "finish_reason" => "stop"
+      }]
+    }
+
+    responses = [tool_call_response.call("call_1"), tool_call_response.call("call_2"), final_response]
+    allow(weather).to receive(:execute_runtime_request) { responses.shift }
+
+    response = weather.chat_completion(max_tool_calls: 1)
     expect(response).to be_a(String)
+    expect(response).to include("Final answer")
   end
 end

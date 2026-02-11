@@ -50,9 +50,7 @@ RSpec.describe MeaningOfLife, :vcr do
       subject.transcript << { user: "WHAT IS THE MEANING OF LIFE?" }
     end
 
-    # TODO: RubyLLM doesn't support OpenAI's predicted outputs feature yet
-    # This feature needs to be added to RubyLLM or we need a workaround
-    xit "does a completion with OpenAI" do
+    it "does a completion with OpenAI" do
       expect(completion).to start_with("THE MEANING OF LIFE")
       expect(subject.transcript.last).to eq({ assistant: completion })
       expect(response.dig("usage", "completion_tokens_details", "accepted_prediction_tokens")).to be > 0

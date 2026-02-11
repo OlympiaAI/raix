@@ -56,7 +56,7 @@ RSpec.describe "before_completion hook" do
       end
 
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       instance.chat_completion
 
@@ -86,7 +86,7 @@ RSpec.describe "before_completion hook" do
 
     it "calls the class-level hook" do
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       expect(instance.chat_completion).to eq("test response")
     end
@@ -115,7 +115,7 @@ RSpec.describe "before_completion hook" do
     it "calls the instance-level hook" do
       instance = chat_class.new
       instance.before_completion = ->(_context) { { temperature: 0.5 } }
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       expect(instance.chat_completion).to eq("test response")
     end
@@ -148,7 +148,7 @@ RSpec.describe "before_completion hook" do
 
       # Track what params are passed via a spy
       params_received = nil
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         params_received = args[:params]
         mock_response
       end
@@ -187,7 +187,7 @@ RSpec.describe "before_completion hook" do
       end
 
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       instance.chat_completion
 
@@ -209,7 +209,7 @@ RSpec.describe "before_completion hook" do
       end
 
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       instance.chat_completion
 
@@ -238,7 +238,7 @@ RSpec.describe "before_completion hook" do
       end
 
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       # Should not raise an error
       expect { instance.chat_completion }.not_to raise_error
@@ -263,7 +263,7 @@ RSpec.describe "before_completion hook" do
       end
 
       instance = chat_class.new
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       # Should not raise an error
       expect { instance.chat_completion }.not_to raise_error
@@ -294,7 +294,7 @@ RSpec.describe "before_completion hook" do
       instance = chat_class.new
       instance.before_completion = hook_class.new
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         params_received = args[:params]
         mock_response
       end
@@ -323,14 +323,14 @@ RSpec.describe "before_completion hook" do
       instance = chat_class.new
       instance.before_completion = ->(_context) { { model: "different-model" } }
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         params_received = args
         mock_response
       end
 
       instance.chat_completion
 
-      # Model is passed separately in ruby_llm_request
+      # Model is passed separately in execute_runtime_request
       expect(params_received[:model]).to eq("different-model")
     end
 
@@ -348,7 +348,7 @@ RSpec.describe "before_completion hook" do
         }
       }
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         params_received = args[:params]
         mock_response
       end
@@ -389,7 +389,7 @@ RSpec.describe "before_completion hook" do
         {}
       }
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         messages_sent = args[:messages]
         mock_response
       end
@@ -408,7 +408,7 @@ RSpec.describe "before_completion hook" do
         {}
       }
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         messages_sent = args[:messages]
         mock_response
       end
@@ -433,7 +433,7 @@ RSpec.describe "before_completion hook" do
         {}
       }
 
-      allow(instance).to receive(:ruby_llm_request) do |args|
+      allow(instance).to receive(:execute_runtime_request) do |args|
         messages_sent = args[:messages]
         mock_response
       end
@@ -470,7 +470,7 @@ RSpec.describe "before_completion hook" do
         {} # Return empty hash, just logging
       }
 
-      allow(instance).to receive(:ruby_llm_request).and_return(mock_response)
+      allow(instance).to receive(:execute_runtime_request).and_return(mock_response)
 
       instance.chat_completion
 

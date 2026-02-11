@@ -3,7 +3,6 @@
 require "dotenv"
 require "faraday"
 require "faraday/retry"
-require "ruby_llm"
 require "pry"
 require "raix"
 
@@ -24,16 +23,9 @@ end
 
 Dotenv.load
 
-RubyLLM.configure do |config|
+Raix.configure do |config|
   config.openrouter_api_key = ENV.fetch("OR_ACCESS_TOKEN", nil)
   config.openai_api_key = ENV.fetch("OAI_ACCESS_TOKEN", nil)
-  config.log_level = Logger::DEBUG
-end
-
-Raix.configure do |config|
-  # Legacy support - can still set these if needed
-  # config.openrouter_client = OpenRouter::Client.new(access_token: ENV.fetch("OR_ACCESS_TOKEN", nil))
-  # config.openai_client = OpenAI::Client.new(access_token: ENV.fetch("OAI_ACCESS_TOKEN", nil))
 end
 
 RSpec.configure do |config|
