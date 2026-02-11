@@ -29,17 +29,17 @@ module Examples
     def extract_person(text)
       puts "📄 Input Text:"
       puts text
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
 
       # Define the schema for person data
       format = Raix::ResponseFormat.new("Person", {
-        full_name: { type: "string" },
-        age: { type: "integer" },
-        email: { type: "string" },
-        occupation: { type: "string" },
-        skills: ["string"],
-        experience_years: { type: "integer" }
-      })
+                                          full_name: { type: "string" },
+                                          age: { type: "integer" },
+                                          email: { type: "string" },
+                                          occupation: { type: "string" },
+                                          skills: ["string"],
+                                          experience_years: { type: "integer" }
+                                        })
 
       transcript << {
         system: "You are a data extraction assistant. Extract information accurately from the provided text."
@@ -62,25 +62,25 @@ module Examples
     def extract_product(description)
       puts "📦 Product Description:"
       puts description
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
 
       # Define schema for product data
       format = Raix::ResponseFormat.new("Product", {
-        name: { type: "string" },
-        category: { type: "string" },
-        price: { type: "number" },
-        currency: { type: "string" },
-        features: ["string"],
-        specifications: {
-          type: "object",
-          properties: {
-            dimensions: { type: "string" },
-            weight: { type: "string" },
-            color: { type: "string" }
-          }
-        },
-        in_stock: { type: "boolean" }
-      })
+                                          name: { type: "string" },
+                                          category: { type: "string" },
+                                          price: { type: "number" },
+                                          currency: { type: "string" },
+                                          features: ["string"],
+                                          specifications: {
+                                            type: "object",
+                                            properties: {
+                                              dimensions: { type: "string" },
+                                              weight: { type: "string" },
+                                              color: { type: "string" }
+                                            }
+                                          },
+                                          in_stock: { type: "boolean" }
+                                        })
 
       transcript << {
         system: "Extract product information from descriptions. If information is missing, use null."
@@ -103,25 +103,25 @@ module Examples
     def extract_meeting_notes(notes)
       puts "📝 Meeting Notes:"
       puts notes
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
 
       format = Raix::ResponseFormat.new("MeetingNotes", {
-        date: { type: "string" },
-        attendees: ["string"],
-        topics_discussed: ["string"],
-        action_items: [
-          {
-            type: "object",
-            properties: {
-              task: { type: "string" },
-              assignee: { type: "string" },
-              due_date: { type: "string" }
-            }
-          }
-        ],
-        decisions_made: ["string"],
-        next_meeting: { type: "string" }
-      })
+                                          date: { type: "string" },
+                                          attendees: ["string"],
+                                          topics_discussed: ["string"],
+                                          action_items: [
+                                            {
+                                              type: "object",
+                                              properties: {
+                                                task: { type: "string" },
+                                                assignee: { type: "string" },
+                                                due_date: { type: "string" }
+                                              }
+                                            }
+                                          ],
+                                          decisions_made: ["string"],
+                                          next_meeting: { type: "string" }
+                                        })
 
       transcript << {
         system: "Extract structured information from meeting notes. Be thorough and accurate."
@@ -158,7 +158,7 @@ module Examples
       TEXT
       extractor.extract_person(person_text)
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Example 2: Product data extraction
       puts "Example 2: Extract Product Information"
@@ -172,7 +172,7 @@ module Examples
       TEXT
       extractor.extract_product(product_text)
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Example 3: Meeting notes extraction
       puts "Example 3: Extract Meeting Notes"
@@ -192,7 +192,7 @@ module Examples
       TEXT
       extractor.extract_meeting_notes(meeting_text)
 
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
       puts "✨ All extractions complete!"
       puts "\nNote: ResponseFormat ensures the AI returns data matching your exact schema."
       puts "This is perfect for data pipelines, form filling, and structured analysis."

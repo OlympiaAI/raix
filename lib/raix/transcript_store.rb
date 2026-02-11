@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "thread"
-
 module Raix
   # Thread-safe transcript store used by ChatCompletion.
   # Stores messages in abbreviated format when possible while preserving tool payloads.

@@ -33,20 +33,20 @@ module Examples
     # Define what happens when the answer is "yes"
     yes? do |response|
       @questions_asked += 1
-      puts "\n✓ CORRECT! #{response.sub(/^yes,\s*/i, '')}"
+      puts "\n✓ CORRECT! #{response.sub(/^yes,\s*/i, "")}"
       @score += 1
     end
 
     # Define what happens when the answer is "no"
     no? do |response|
       @questions_asked += 1
-      puts "\n✗ INCORRECT! #{response.sub(/^no,\s*/i, '')}"
+      puts "\n✗ INCORRECT! #{response.sub(/^no,\s*/i, "")}"
     end
 
     # Define what happens when the answer is "maybe"
     maybe? do |response|
       @questions_asked += 1
-      puts "\n? UNCLEAR! #{response.sub(/^maybe,\s*/i, '')}"
+      puts "\n? UNCLEAR! #{response.sub(/^maybe,\s*/i, "")}"
     end
 
     def play(questions)
@@ -68,7 +68,7 @@ module Examples
     end
 
     def show_results
-      puts "\n" + "=" * 50
+      puts "\n#{"=" * 50}"
       puts "🏆 Final Score: #{score}/#{questions_asked}"
       percentage = (score.to_f / questions_asked * 100).round
       puts "📊 Percentage: #{percentage}%"

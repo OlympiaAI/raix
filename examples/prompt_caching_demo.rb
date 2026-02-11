@@ -21,7 +21,7 @@ module Examples
     include Raix::ChatCompletion
 
     configure do |config|
-      # Note: Caching works best with Anthropic models
+      # NOTE: Caching works best with Anthropic models
       config.model = ENV.fetch("RAIX_EXAMPLE_MODEL", "anthropic/claude-3-5-sonnet")
       config.temperature = 0.5
     end
@@ -264,7 +264,7 @@ module Examples
     end
 
     def self.run!
-      puts "\n\n" + "=" * 60
+      puts "\n\n#{"=" * 60}"
       puts "🎭 Character Caching Demo"
       puts "=" * 60
       puts
@@ -281,7 +281,7 @@ module Examples
         "Do you think we'll find alien life in our lifetime?"
       ]
 
-      conversation.each_with_index do |message, i|
+      conversation.each_with_index do |message, _i|
         puts "You: #{message}"
         response = character.chat(message)
         puts "Dr. Rodriguez: #{response}"

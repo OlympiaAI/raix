@@ -30,7 +30,7 @@ module Examples
     def analyze_sentiment(text)
       puts "📝 Text to Analyze:"
       puts text
-      puts "\n" + "-" * 60
+      puts "\n#{"-" * 60}"
 
       transcript << {
         system: "You are a sentiment analysis expert. Return your analysis as JSON."
@@ -60,15 +60,15 @@ module Examples
     # Compare items and return flexible comparison data
     def compare_items(item1, item2, criteria)
       puts "⚖️  Comparing: #{item1} vs #{item2}"
-      puts "Criteria: #{criteria.join(', ')}"
-      puts "\n" + "-" * 60
+      puts "Criteria: #{criteria.join(", ")}"
+      puts "\n#{"-" * 60}"
 
       transcript << {
         system: "You are a comparison expert. Return detailed comparisons as JSON."
       }
       transcript << {
         user: <<~PROMPT
-          Compare #{item1} and #{item2} based on these criteria: #{criteria.join(', ')}.
+          Compare #{item1} and #{item2} based on these criteria: #{criteria.join(", ")}.
 
           Return a JSON object with:
           - winner (which is better overall)
@@ -91,7 +91,7 @@ module Examples
     def generate_quiz(topic, num_questions)
       puts "📚 Generating Quiz on: #{topic}"
       puts "Number of questions: #{num_questions}"
-      puts "\n" + "-" * 60
+      puts "\n#{"-" * 60}"
 
       transcript << {
         system: "You create educational quizzes. Return quiz data as JSON."
@@ -120,10 +120,10 @@ module Examples
     # Recipe generation with flexible JSON structure
     def generate_recipe(dish, dietary_restrictions = [])
       puts "🍳 Generating Recipe for: #{dish}"
-      puts "Dietary restrictions: #{dietary_restrictions.any? ? dietary_restrictions.join(', ') : 'None'}"
-      puts "\n" + "-" * 60
+      puts "Dietary restrictions: #{dietary_restrictions.any? ? dietary_restrictions.join(", ") : "None"}"
+      puts "\n#{"-" * 60}"
 
-      restrictions = dietary_restrictions.any? ? " (#{dietary_restrictions.join(', ')})" : ""
+      restrictions = dietary_restrictions.any? ? " (#{dietary_restrictions.join(", ")})" : ""
 
       transcript << {
         system: "You are a chef. Create recipes as structured JSON."
@@ -165,11 +165,11 @@ module Examples
       # Example 1: Sentiment Analysis
       puts "Example 1: Sentiment Analysis"
       puts "=" * 60
-      review = "I absolutely loved this product! The quality exceeded my expectations, "\
+      review = "I absolutely loved this product! The quality exceeded my expectations, " \
                "though I wish the shipping had been a bit faster. Overall, highly recommended!"
       demo.analyze_sentiment(review)
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Example 2: Item Comparison
       puts "Example 2: Product Comparison"
@@ -177,24 +177,24 @@ module Examples
       demo.compare_items(
         "MacBook Pro",
         "Dell XPS 15",
-        ["performance", "price", "portability", "ecosystem"]
+        %w[performance price portability ecosystem]
       )
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Example 3: Quiz Generation
       puts "Example 3: Quiz Generation"
       puts "=" * 60
       demo.generate_quiz("Ruby Programming Basics", 3)
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Example 4: Recipe Generation
       puts "Example 4: Recipe Generation"
       puts "=" * 60
       demo.generate_recipe("Chocolate Chip Cookies", ["gluten-free"])
 
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
       puts "✨ JSON mode demo complete!"
       puts "\n💡 Key Differences:"
       puts "   • JSON Mode: Flexible structure, AI decides format"

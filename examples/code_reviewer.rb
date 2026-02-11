@@ -35,7 +35,7 @@ module Examples
     yes? do |response|
       @approved_count += 1
       puts "✅ APPROVED"
-      puts "   #{response.sub(/^yes,\s*/i, '').strip}"
+      puts "   #{response.sub(/^yes,\s*/i, "").strip}"
       puts
     end
 
@@ -43,7 +43,7 @@ module Examples
     no? do |response|
       @rejected_count += 1
       puts "❌ REJECTED"
-      puts "   #{response.sub(/^no,\s*/i, '').strip}"
+      puts "   #{response.sub(/^no,\s*/i, "").strip}"
       puts
     end
 
@@ -51,7 +51,7 @@ module Examples
     maybe? do |response|
       @unclear_count += 1
       puts "⚠️  NEEDS REVIEW"
-      puts "   #{response.sub(/^maybe,\s*/i, '').strip}"
+      puts "   #{response.sub(/^maybe,\s*/i, "").strip}"
       puts
     end
 

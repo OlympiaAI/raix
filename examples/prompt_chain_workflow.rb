@@ -35,10 +35,10 @@ module Examples
     end
 
     # Step 1: Initial research
-    prompt text: -> {
-      "Research the topic '#{research_topic}' and identify 3-5 key points that should be covered. "\
-      "List each point clearly."
-    }, success: ->(response) {
+    prompt text: lambda {
+      "Research the topic '#{research_topic}' and identify 3-5 key points that should be covered. " \
+        "List each point clearly."
+    }, success: lambda { |response|
       puts "✅ Research complete"
       @key_points = response.split("\n").grep(/^\d+\./).map { |line| line.sub(/^\d+\.\s*/, "") }
       puts "   Found #{@key_points.length} key points"
@@ -46,22 +46,22 @@ module Examples
     }
 
     # Step 2: Create outline (only if we have key points)
-    prompt text: -> {
-      "Based on these key points:\n#{key_points.map.with_index { |p, i| "#{i + 1}. #{p}" }.join("\n")}\n\n"\
-      "Create a detailed outline for an article about #{research_topic}."
-    }, if: -> { key_points.any? }, success: ->(response) {
+    prompt text: lambda {
+      "Based on these key points:\n#{key_points.map.with_index { |p, i| "#{i + 1}. #{p}" }.join("\n")}\n\n" \
+        "Create a detailed outline for an article about #{research_topic}."
+    }, if: -> { key_points.any? }, success: lambda { |response|
       puts "✅ Outline created"
       puts "   Validating structure..."
       @outline_approved = response.include?("Introduction") || response.include?("Overview")
-      puts "   Outline #{outline_approved ? 'approved ✓' : 'needs revision ✗'}"
+      puts "   Outline #{outline_approved ? "approved ✓" : "needs revision ✗"}"
       puts
     }
 
     # Step 3: Write introduction (only if outline approved)
-    prompt text: -> {
-      "Write an engaging introduction for an article about #{research_topic}. "\
-      "Keep it concise (2-3 paragraphs)."
-    }, if: -> { outline_approved }, success: ->(response) {
+    prompt text: lambda {
+      "Write an engaging introduction for an article about #{research_topic}. " \
+        "Keep it concise (2-3 paragraphs)."
+    }, if: -> { outline_approved }, success: lambda { |response|
       puts "✅ Introduction written"
       @draft_sections << { section: "Introduction", content: response }
       puts "   Added to draft (#{draft_sections.length} sections)"
@@ -69,11 +69,11 @@ module Examples
     }
 
     # Step 4: Write main content sections
-    prompt text: -> {
-      "Write the main body section covering these key points:\n"\
-      "#{key_points.map.with_index { |p, i| "#{i + 1}. #{p}" }.join("\n")}\n\n"\
-      "Make it informative and well-structured."
-    }, if: -> { draft_sections.any? }, success: ->(response) {
+    prompt text: lambda {
+      "Write the main body section covering these key points:\n" \
+        "#{key_points.map.with_index { |p, i| "#{i + 1}. #{p}" }.join("\n")}\n\n" \
+        "Make it informative and well-structured."
+    }, if: -> { draft_sections.any? }, success: lambda { |response|
       puts "✅ Main content written"
       @draft_sections << { section: "Main Content", content: response }
       puts "   Added to draft (#{draft_sections.length} sections)"
@@ -81,10 +81,10 @@ module Examples
     }
 
     # Step 5: Write conclusion
-    prompt text: -> {
-      "Write a conclusion that summarizes the key insights about #{research_topic} "\
-      "and provides a forward-looking perspective."
-    }, if: -> { draft_sections.length >= 2 }, success: ->(response) {
+    prompt text: lambda {
+      "Write a conclusion that summarizes the key insights about #{research_topic} " \
+        "and provides a forward-looking perspective."
+    }, if: -> { draft_sections.length >= 2 }, success: lambda { |response|
       puts "✅ Conclusion written"
       @draft_sections << { section: "Conclusion", content: response }
       puts "   Added to draft (#{draft_sections.length} sections)"
@@ -101,7 +101,7 @@ module Examples
       execute_prompt_chain
 
       # Display final article
-      puts "\n" + "=" * 60
+      puts "\n#{"=" * 60}"
       puts "📄 Complete Article"
       puts "=" * 60
       puts
@@ -145,10 +145,10 @@ module Examples
     end
 
     # Step 1: Validate and clean data
-    prompt text: -> {
-      "Analyze this data and identify any issues or inconsistencies:\n\n#{raw_data}\n\n"\
-      "Return 'CLEAN' if data is valid, or describe the issues found."
-    }, success: ->(response) {
+    prompt text: lambda {
+      "Analyze this data and identify any issues or inconsistencies:\n\n#{raw_data}\n\n" \
+        "Return 'CLEAN' if data is valid, or describe the issues found."
+    }, success: lambda { |response|
       if response.include?("CLEAN")
         @cleaned_data = raw_data
         puts "✅ Data validation passed"
@@ -160,10 +160,10 @@ module Examples
     }
 
     # Step 2: Perform analysis (with retry capability)
-    prompt text: -> {
-      "Analyze this dataset and provide insights:\n\n#{cleaned_data}\n\n"\
-      "Focus on trends, patterns, and key statistics."
-    }, if: -> { !cleaned_data.nil? }, until: -> { analysis_results.any? || retry_count > 2 }, success: ->(response) {
+    prompt text: lambda {
+      "Analyze this dataset and provide insights:\n\n#{cleaned_data}\n\n" \
+        "Focus on trends, patterns, and key statistics."
+    }, if: -> { !cleaned_data.nil? }, until: -> { analysis_results.any? || retry_count > 2 }, success: lambda { |response|
       if response.length > 50 # Simple validation
         @analysis_results[:insights] = response
         puts "✅ Analysis complete"
@@ -175,10 +175,10 @@ module Examples
     }
 
     # Step 3: Generate summary
-    prompt text: -> {
-      "Based on this analysis:\n\n#{analysis_results[:insights]}\n\n"\
-      "Create a concise executive summary (2-3 sentences)."
-    }, if: -> { analysis_results[:insights] }, success: ->(response) {
+    prompt text: lambda {
+      "Based on this analysis:\n\n#{analysis_results[:insights]}\n\n" \
+        "Create a concise executive summary (2-3 sentences)."
+    }, if: -> { analysis_results[:insights] }, success: lambda { |response|
       @analysis_results[:summary] = response
       puts "✅ Summary generated"
       puts
@@ -237,14 +237,14 @@ if $PROGRAM_NAME == __FILE__
   puts "=" * 60
   Examples::PromptChainWorkflow.run!
 
-  puts "\n\n" + "=" * 60 + "\n\n"
+  puts "\n\n#{"=" * 60}\n\n"
 
   # Demo 2: Data Processing Workflow
   puts "Demo 2: Data Processing Workflow"
   puts "=" * 60
   Examples::DataProcessingWorkflow.run!
 
-  puts "\n" + "=" * 60
+  puts "\n#{"=" * 60}"
   puts "✨ All workflow demos complete!"
   puts "\n💡 PromptDeclarations Features Demonstrated:"
   puts "   • Sequential prompt execution"

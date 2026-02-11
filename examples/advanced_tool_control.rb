@@ -91,7 +91,7 @@ module Examples
       puts "\n📋 Tool Call Log:"
       puts "-" * 60
       call_log.each_with_index do |entry, i|
-        puts "#{i + 1}. #{entry[:function]} - #{entry[:timestamp].strftime('%H:%M:%S.%L')}"
+        puts "#{i + 1}. #{entry[:function]} - #{entry[:timestamp].strftime("%H:%M:%S.%L")}"
         puts "   Args: #{entry[:args]}"
       end
       puts
@@ -105,8 +105,8 @@ module Examples
       puts
 
       transcript << {
-        user: "Search for Q4 sales data, calculate the average revenue, "\
-              "check the analytics system status, and send a high-priority "\
+        user: "Search for Q4 sales data, calculate the average revenue, " \
+              "check the analytics system status, and send a high-priority " \
               "notification with the results."
       }
 
@@ -126,8 +126,8 @@ module Examples
       puts
 
       transcript << {
-        user: "I need you to search for customer data, calculate conversion rates, "\
-              "check system status, search for product data, calculate product stats, "\
+        user: "I need you to search for customer data, calculate conversion rates, " \
+              "check system status, search for product data, calculate product stats, " \
               "and send notifications to the team."
       }
 
@@ -149,8 +149,8 @@ module Examples
       puts
 
       transcript << {
-        user: "Search the database for order #12345, check its status, "\
-              "verify payment, and then complete the task with ID 'ORDER-CHECK' "\
+        user: "Search the database for order #12345, check its status, " \
+              "verify payment, and then complete the task with ID 'ORDER-CHECK' " \
               "once you have the information."
       }
 
@@ -174,13 +174,13 @@ module Examples
       demo1 = new
       demo1.demo_multiple_calls
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Demo 2: Limited calls
       demo2 = new
       demo2.demo_limited_calls
 
-      puts "\n" + "=" * 60 + "\n\n"
+      puts "\n#{"=" * 60}\n\n"
 
       # Demo 3: Early termination
       demo3 = new
@@ -267,7 +267,7 @@ module Examples
         stop_tool_calls_and_respond!
         "Order #{args[:order_id]} processed successfully. Confirmation email sent."
       else
-        "Cannot process: Missing validations #{order_status.select { |k, v| !v }.keys}"
+        "Cannot process: Missing validations #{order_status.reject { |_k, v| v }.keys}"
       end
     end
 
@@ -277,7 +277,7 @@ module Examples
       puts
 
       transcript << {
-        system: "You are an order processing agent. Validate, verify payment, "\
+        system: "You are an order processing agent. Validate, verify payment, " \
                 "check inventory, calculate shipping, then process the order."
       }
       transcript << {
@@ -287,14 +287,14 @@ module Examples
       result = chat_completion
 
       puts "\n📊 Order Status:"
-      order_status.each { |k, v| puts "   #{k}: #{v ? '✓' : '✗'}" }
+      order_status.each { |k, v| puts "   #{k}: #{v ? "✓" : "✗"}" }
       puts
       puts "✅ Result: #{result}"
       puts
     end
 
     def self.run!
-      puts "\n\n" + "=" * 60
+      puts "\n\n#{"=" * 60}"
       puts "🤖 Autonomous Order Processing Agent"
       puts "=" * 60
       puts

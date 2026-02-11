@@ -63,7 +63,7 @@ module Examples
       self.stream = lambda do |chunk|
         unless started
           # Clear the "Thinking..." line
-          print "\r" + " " * 20 + "\r"
+          print "\r#{" " * 20}\r"
           puts "🤖 Response:"
           puts
           started = true
@@ -193,10 +193,10 @@ module Examples
       # Example 4: Interactive chat (optional)
       if ARGV.include?("--interactive")
         sleep 1
-        puts "\n" + "=" * 60 + "\n"
+        puts "\n#{"=" * 60}\n"
         chat.interactive_chat
       else
-        puts "\n" + "=" * 60
+        puts "\n#{"=" * 60}"
         puts "✨ Streaming demo complete!"
         puts "\nTip: Run with --interactive flag for an interactive chat session:"
         puts "     bundle exec ruby examples/streaming_chat.rb --interactive"
