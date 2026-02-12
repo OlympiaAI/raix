@@ -51,3 +51,8 @@ Style/FrozenStringLiteralComment:
 
 Style/MultilineBlockChain:
   Enabled: false
+
+Style/Documentation:
+  Exclude:
+    - "examples/**/*"
+    - "spec/**/*"

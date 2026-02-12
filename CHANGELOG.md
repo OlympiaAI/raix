@@ -1,3 +1,30 @@
+## [2.1.0] - 2026-02-11
+
+### Breaking Changes
+- **Standalone runtime** - Removed `ruby_llm` runtime dependency. Raix now ships its own chat runtime.
+- **Configuration migration** - Primary API-key setup moved to `Raix.configure` (`openai_api_key`, `openrouter_api_key`).
+
+### Added
+- Native runtime components:
+  - `Raix::Runtime::Client`
+  - `Raix::Runtime::Transport`
+  - `Raix::Runtime::Providers::OpenAI`
+  - `Raix::Runtime::Providers::OpenRouter`
+  - `Raix::Runtime::StreamParser`
+  - `Raix::Runtime::StreamAccumulator`
+- `Raix::TranscriptStore` for thread-safe transcript handling without RubyLLM objects.
+- Migration guide: `docs/migration/standalone-runtime-migration.md`.
+- Comprehensive runtime unit tests (providers, transport, streaming parser/accumulator, transcript store, client routing).
+
+### Changed
+- `ChatCompletion` now delegates network execution to the internal runtime while preserving API compatibility.
+- Predicted outputs integration test enabled for OpenAI.
+- Examples and README updated to use Raix-native configuration.
+
+### Deprecated
+- Legacy `openai_client` / `openrouter_client` configuration paths.
+- `ruby_llm_config` shim remains temporarily for migration and emits deprecation warnings.
+
 ## [2.0.0] - 2025-12-17
 
 ### Breaking Changes

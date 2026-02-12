@@ -2,20 +2,27 @@
 
 RSpec.describe Raix::Configuration do
   describe "#client?" do
-    context "with RubyLLM configured via OpenRouter API key" do
+    context "with native OpenRouter API key" do
       it "returns true" do
         configuration = described_class.new(fallback: nil)
-        configuration.ruby_llm_config = RubyLLM::Configuration.new
-        configuration.ruby_llm_config.openrouter_api_key = "test_key"
+        configuration.openrouter_api_key = "test_key"
         expect(configuration.client?).to eq true
       end
     end
 
-    context "with RubyLLM configured via OpenAI API key" do
+    context "with native OpenAI API key" do
       it "returns true" do
         configuration = described_class.new(fallback: nil)
-        configuration.ruby_llm_config = RubyLLM::Configuration.new
-        configuration.ruby_llm_config.openai_api_key = "test_key"
+        configuration.openai_api_key = "test_key"
+        expect(configuration.client?).to eq true
+      end
+    end
+
+    context "with legacy RubyLLM config shim" do
+      it "returns true when keys are present" do
+        configuration = described_class.new(fallback: nil)
+        legacy_config = Struct.new(:openai_api_key, :openrouter_api_key, :anthropic_api_key, :gemini_api_key).new(nil, "test_key", nil, nil)
+        configuration.ruby_llm_config = legacy_config
         expect(configuration.client?).to eq true
       end
     end
@@ -23,12 +30,8 @@ RSpec.describe Raix::Configuration do
     context "without any API configuration" do
       it "returns false" do
         configuration = described_class.new(fallback: nil)
-        configuration.ruby_llm_config = RubyLLM::Configuration.new
-        # Clear all API keys
-        configuration.ruby_llm_config.openai_api_key = nil
-        configuration.ruby_llm_config.openrouter_api_key = nil
-        configuration.ruby_llm_config.anthropic_api_key = nil
-        configuration.ruby_llm_config.gemini_api_key = nil
+        configuration.openai_api_key = nil
+        configuration.openrouter_api_key = nil
         expect(configuration.client?).to eq false
       end
     end
