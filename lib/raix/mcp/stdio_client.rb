@@ -1,4 +1,3 @@
-require_relative "tool"
 require "json"
 require "securerandom"
 require "digest"

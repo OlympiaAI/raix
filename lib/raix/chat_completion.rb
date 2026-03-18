@@ -6,9 +6,6 @@ require "active_support/core_ext/string/filters"
 require "active_support/core_ext/hash/indifferent_access"
 require "ruby_llm"
 
-require_relative "message_adapters/base"
-require_relative "transcript_adapter"
-require_relative "function_tool_adapter"
 
 module Raix
   class UndeclaredToolError < StandardError; end
