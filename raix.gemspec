@@ -32,4 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday-retry", "~> 2.0"
   spec.add_dependency "ostruct"
   spec.add_dependency "ruby_llm", "~> 1.9"
+  spec.add_dependency "zeitwerk", "~> 2.7"
 end

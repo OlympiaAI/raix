@@ -1,20 +1,8 @@
 # frozen_string_literal: true
 
 require "ruby_llm"
+require "zeitwerk"
 
-require_relative "raix/completion_context"
-require_relative "raix/configuration"
-require_relative "raix/version"
-require_relative "raix/transcript_adapter"
-require_relative "raix/function_tool_adapter"
-require_relative "raix/chat_completion"
-require_relative "raix/function_dispatch"
-require_relative "raix/prompt_declarations"
-require_relative "raix/predicate"
-require_relative "raix/response_format"
-require_relative "raix/mcp"
-
-# The Raix module provides configuration options for the Raix gem.
 module Raix
   class << self
     attr_writer :configuration
@@ -30,3 +18,7 @@ module Raix
     yield(configuration)
   end
 end
+
+loader = Zeitwerk::Loader.for_gem
+loader.inflector.inflect("mcp" => "MCP")
+loader.setup

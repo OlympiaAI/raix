@@ -16,8 +16,6 @@ require "active_support/inflector"
 require "securerandom"
 require "uri"
 
-require_relative "../mcp/sse_client"
-require_relative "../mcp/stdio_client"
 
 module Raix
   # Model Context Protocol integration for Raix
