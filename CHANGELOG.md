@@ -1,3 +1,8 @@
+## [2.0.1] - 2026-03-20
+
+### Changed
+- Replaced `require_relative` with Zeitwerk autoloading (thanks @seuros, PR #47)
+
 ## [2.0.0] - 2025-12-17
 
 ### Breaking Changes

@@ -16,7 +16,6 @@ require "active_support/inflector"
 require "securerandom"
 require "uri"
 
-
 module Raix
   # Model Context Protocol integration for Raix
   #

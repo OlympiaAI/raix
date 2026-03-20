@@ -3,6 +3,7 @@
 require "ruby_llm"
 require "zeitwerk"
 
+# Ruby AI eXtensions
 module Raix
   class << self
     attr_writer :configuration
