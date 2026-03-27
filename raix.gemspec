@@ -24,6 +24,13 @@ Gem::Specification.new do |spec|
       (File.expand_path(f) == __FILE__) || f.start_with?(*%w[bin/ test/ spec/ features/ .git .circleci appveyor])
     end
   end
+
+  # Ensure all gem files are world-readable so they work in Docker containers
+  # where gems are installed as root but the app runs as a non-root user.
+  spec.files.each do |f|
+    path = File.join(__dir__, f)
+    File.chmod(0o644, path) if File.file?(path) && !File.executable?(path)
+  end
   spec.bindir = "exe"
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
