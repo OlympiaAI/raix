@@ -1,3 +1,9 @@
+## [2.0.2] - 2026-03-27
+
+### Fixed
+- Ensure gem files are world-readable (644) for Docker deployments where gems are installed as root but the app runs as a non-root user
+- Added gemspec-level safety net that normalizes file permissions at build time
+
 ## [2.0.1] - 2026-03-20
 
 ### Changed
