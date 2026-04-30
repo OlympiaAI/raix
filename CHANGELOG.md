@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Fixed
+- `NoMethodError: undefined method 'strip' for nil` in `Raix::ChatCompletion` when an LLM (notably Gemini under certain stop conditions) returns a final assistant message with `"content": null`. Three call sites in `lib/raix/chat_completion.rb` now use `content.to_s.strip` so a nil response coerces to `""` instead of raising.
+
 ## [2.0.2] - 2026-03-27
 
 ### Fixed
