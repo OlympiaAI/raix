@@ -174,7 +174,7 @@ module Raix
             # Process the final response
             content = response.dig("choices", 0, "message", "content")
             transcript << { assistant: content } if save_response
-            return raw ? response : content.strip
+            return raw ? response : content.to_s.strip
           end
 
           # Dispatch tool calls
@@ -215,7 +215,7 @@ module Raix
 
             content = response.dig("choices", 0, "message", "content")
             transcript << { assistant: content } if save_response
-            return raw ? response : content.strip
+            return raw ? response : content.to_s.strip
           end
         end
 
@@ -223,7 +223,7 @@ module Raix
           content = res.dig("choices", 0, "message", "content")
 
           transcript << { assistant: content } if save_response
-          content = content.strip
+          content = content.to_s.strip
 
           if json
             # Make automatic JSON parsing available to non-OpenAI providers that don't support the response_format parameter
