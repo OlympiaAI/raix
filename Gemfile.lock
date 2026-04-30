@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    raix (2.0.1)
+    raix (2.0.2)
       activesupport (>= 6.0)
       faraday-retry (~> 2.0)
       ostruct
@@ -49,8 +49,8 @@ GEM
       net-http
     faraday-retry (2.4.0)
       faraday (~> 2.0)
-    ffi (1.17.2)
     ffi (1.17.2-arm64-darwin)
+    ffi (1.17.2-x86_64-linux-gnu)
     formatador (1.1.0)
     guard (2.18.1)
       formatador (>= 0.2.4)
@@ -83,17 +83,15 @@ GEM
     lumberjack (1.2.10)
     marcel (1.1.0)
     method_source (1.1.0)
-    mini_portile2 (2.8.9)
     minitest (5.27.0)
     multipart-post (2.4.1)
     nenv (0.3.0)
     net-http (0.4.1)
       uri
     netrc (0.11.0)
-    nokogiri (1.18.8)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
     nokogiri (1.18.8-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.18.8-x86_64-linux-gnu)
       racc (~> 1.4)
     notiffany (0.1.3)
       nenv (~> 0.1)
