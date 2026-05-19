@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [2.0.4] - 2026-05-19
+
+### Fixed
+- `ruby_llm_request` now preserves the upstream provider's `id`, `model`, and `provider` fields, plus the full `usage` payload (including `prompt_tokens_details.cached_tokens` and `completion_tokens_details.reasoning_tokens`) on the OpenAI-compatible response hash. Previously the conversion dropped everything except `choices` and basic token counts, which broke callers that needed the generation id for authoritative cost lookups (e.g. OpenRouter's `/api/v1/generation` endpoint) or that wanted to verify prompt-cache hits via `cached_tokens`.
+- Added `require "active_support/core_ext/module/delegation"` so `Raix::ChatCompletion` loads cleanly without an external preload of ActiveSupport. The class uses `delegate :configuration, to: :class` but did not pull in the required core ext, so a bare `require "raix"` would raise `NoMethodError` for `delegate`.
+
 ## [2.0.3] - 2026-04-30
 
 ### Fixed

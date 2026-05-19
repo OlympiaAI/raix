@@ -4,6 +4,7 @@ require "active_support/concern"
 require "active_support/core_ext/object/blank"
 require "active_support/core_ext/string/filters"
 require "active_support/core_ext/hash/indifferent_access"
+require "active_support/core_ext/module/delegation"
 require "ruby_llm"
 
 module Raix
@@ -56,9 +57,7 @@ module Raix
     end
 
     # Instance level access to the class-level configuration.
-    def configuration
-      self.class.configuration
-    end
+    delegate :configuration, to: :class
 
     # This method performs chat completion based on the provided transcript and parameters.
     #
@@ -398,8 +397,34 @@ module Raix
         # Non-streaming mode - return OpenAI-compatible response format
         response_message = has_user_message ? chat.complete : chat.ask
 
-        # Convert RubyLLM response to OpenAI format for compatibility
+        # Pull through the raw provider payload when available. OpenRouter's
+        # `id` is the only handle we have to look up authoritative billing
+        # cost via /api/v1/generation, and callers that watch the response
+        # snapshot for `model` / cached-token counts shouldn't have to break
+        # out of the OpenAI-compatible shape to get them.
+        raw_body = response_message.raw.respond_to?(:body) ? response_message.raw.body : nil
+        raw_body = {} unless raw_body.is_a?(Hash)
+
+        usage_payload = {
+          "prompt_tokens" => response_message.input_tokens,
+          "completion_tokens" => response_message.output_tokens,
+          "total_tokens" => (response_message.input_tokens || 0) + (response_message.output_tokens || 0)
+        }
+
+        # Merge prompt_tokens_details / completion_tokens_details (cached tokens,
+        # reasoning tokens) when the provider supplied them.
+        if (upstream_usage = raw_body["usage"]).is_a?(Hash)
+          upstream_usage.each do |key, value|
+            next if usage_payload.key?(key)
+
+            usage_payload[key] = value
+          end
+        end
+
         {
+          "id" => raw_body["id"],
+          "model" => raw_body["model"] || response_message.model_id,
+          "provider" => raw_body["provider"],
           "choices" => [
             {
               "message" => {
@@ -410,11 +435,7 @@ module Raix
               "finish_reason" => response_message.tool_call? ? "tool_calls" : "stop"
             }
           ],
-          "usage" => {
-            "prompt_tokens" => response_message.input_tokens,
-            "completion_tokens" => response_message.output_tokens,
-            "total_tokens" => (response_message.input_tokens || 0) + (response_message.output_tokens || 0)
-          }
+          "usage" => usage_payload
         }
       end
     rescue StandardError => e
