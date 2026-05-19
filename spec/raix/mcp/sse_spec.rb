@@ -4,7 +4,7 @@ require "spec_helper"
 require "securerandom"
 
 RSpec.describe Raix::MCP do
-  context "with live SSE MCP server" do
+  context "with live SSE MCP server", :live do
     # Use the official GitMCP endpoint for the MCP documentation server
     # NOTE: This server needs to implement the SSE protocol correctly with an endpoint event
     let(:real_mcp_url) { "https://gitmcp.io/OlympiaAI/raix/docs" }

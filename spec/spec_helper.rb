@@ -47,6 +47,11 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
+  # Specs tagged `:live` make real network calls to third-party services and
+  # are excluded by default so CI doesn't hang on transient outages. Run them
+  # locally with `LIVE_SPECS=1 bundle exec rspec`.
+  config.filter_run_excluding(live: true) unless ENV["LIVE_SPECS"]
+
   config.before(:example, :novcr) do
     VCR.turn_off!
     WebMock.disable!
