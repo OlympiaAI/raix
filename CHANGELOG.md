@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Fixed
+- `Raix::Configuration` no longer defaults `temperature` to `0.0`. The default was being injected into every request payload, which OpenRouter rejects with `404 No endpoints found that can handle the requested parameters` when routed to providers whose `supported_parameters` list omits `temperature` (notably Anthropic's Claude 4.7 family) and `provider.require_parameters: true` is set — which Raix sets automatically whenever `json: true` is passed to `chat_completion`. Callers that want a specific temperature should set one explicitly (`self.temperature = 0.0` on the including class, or `Raix.configure { |c| c.temperature = 0.0 }` globally); when unset, Raix now omits the parameter and the provider's own server-side default applies. `max_tokens`, `max_completion_tokens`, and `model` defaults are unchanged.
+
 ## [2.0.4] - 2026-05-19
 
 ### Fixed
