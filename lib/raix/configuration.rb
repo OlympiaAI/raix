@@ -51,12 +51,19 @@ module Raix
     DEFAULT_MAX_TOKENS = 1000
     DEFAULT_MAX_COMPLETION_TOKENS = 16_384
     DEFAULT_MODEL = "meta-llama/llama-3.3-8b-instruct:free"
-    DEFAULT_TEMPERATURE = 0.0
     DEFAULT_MAX_TOOL_CALLS = 25
 
     # Initializes a new instance of the Configuration class with default values.
+    #
+    # Note: temperature is intentionally not defaulted. Setting a non-nil
+    # temperature here would force it into every request payload, and some
+    # providers (e.g. Anthropic's Claude 4.7 family on OpenRouter) do not list
+    # `temperature` in their supported parameters. Combined with
+    # `provider.require_parameters: true` (which Raix sets when `json: true`),
+    # an injected default of 0.0 causes OpenRouter to reject the request with
+    # "No endpoints found that can handle the requested parameters." Callers
+    # who want a specific temperature should set one explicitly.
     def initialize(fallback: nil)
-      self.temperature = DEFAULT_TEMPERATURE
       self.max_completion_tokens = DEFAULT_MAX_COMPLETION_TOKENS
       self.max_tokens = DEFAULT_MAX_TOKENS
       self.model = DEFAULT_MODEL
