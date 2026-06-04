@@ -355,7 +355,7 @@ module Raix
           chat.with_instructions(content)
         when "user"
           has_user_message = true
-          chat.add_message(role: :user, content:)
+          chat.add_message(role: :user, content: MultimodalContentAdapter.translate(content))
         when "assistant"
           if msg[:tool_calls] || msg["tool_calls"]
             chat.add_message(role: :assistant, content:, tool_calls: msg[:tool_calls] || msg["tool_calls"])
