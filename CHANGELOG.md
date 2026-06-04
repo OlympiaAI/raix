@@ -1,7 +1,11 @@
 ## [Unreleased]
 
+## [2.0.5] - 2026-06-04
+
 ### Fixed
 - `Raix::Configuration` no longer defaults `temperature` to `0.0`. The default was being injected into every request payload, which OpenRouter rejects with `404 No endpoints found that can handle the requested parameters` when routed to providers whose `supported_parameters` list omits `temperature` (notably Anthropic's Claude 4.7 family) and `provider.require_parameters: true` is set — which Raix sets automatically whenever `json: true` is passed to `chat_completion`. Callers that want a specific temperature should set one explicitly (`self.temperature = 0.0` on the including class, or `Raix.configure { |c| c.temperature = 0.0 }` globally); when unset, Raix now omits the parameter and the provider's own server-side default applies. `max_tokens`, `max_completion_tokens`, and `model` defaults are unchanged.
+- `Raix::FunctionToolAdapter` now forwards the full JSON-Schema dict for each function parameter to RubyLLM instead of rebuilding it from `type` + `description` only. Rich schema fields like `additionalProperties`, `items`, `enum`, and nested `properties` were silently dropped, leaving providers (notably Gemini's structured output via OpenRouter) to invent degenerate shapes for `type: object` arguments — e.g. emitting `{"prefix" => false}` instead of `{"prefix:title" => "..."}`. Function declarations with rich object schemas now reach the provider intact.
+- The outer tool-args schema continues to inject `additionalProperties: false` and `strict: true` by default for OpenAI strict-mode compatibility, but consumers can override either by setting them explicitly in the function declaration.
 
 ## [2.0.4] - 2026-05-19
 

@@ -7,10 +7,18 @@ module Raix
       tool_class = Class.new(RubyLLM::Tool) do
         description function_def[:description] if function_def[:description]
 
-        # Define parameters based on function definition
-        function_def[:parameters][:properties]&.each do |param_name, param_def|
-          required = function_def[:parameters][:required]&.include?(param_name)
-          param param_name.to_sym, type: param_def[:type], desc: param_def[:description], required:
+        # Forward the full JSON-schema parameter dict to RubyLLM rather than
+        # rebuilding it field-by-field via `param(...)`. The per-field path
+        # only carried `type` and `description`, which silently dropped richer
+        # schema like `additionalProperties`, `items`, `enum`, or nested
+        # `properties` — leaving providers (notably Gemini's structured output)
+        # to invent degenerate shapes for `type: object` arguments.
+        if function_def[:parameters].is_a?(Hash) && function_def[:parameters][:properties].present?
+          # RubyLLM's `params(schema)` path forwards the schema verbatim and, unlike the
+          # per-field `param(...)` path, does not inject the OpenAI strict-mode guards. Default
+          # them on so existing tools keep strict behavior, while letting a function declaration
+          # override either by setting it explicitly.
+          params({ additionalProperties: false, strict: true }.merge(function_def[:parameters]))
         end
 
         # Store reference to the instance and function name
