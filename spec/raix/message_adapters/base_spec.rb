@@ -44,6 +44,15 @@ RSpec.describe Raix::MessageAdapters::Base do
         expected = { role: "user", content: [{ type: "text", text: "Hello" * 5, cache_control: { type: "ephemeral" } }] }
         expect(adapter.transform(message)).to eq(expected)
       end
+
+      it "leaves multimodal array content untouched" do
+        parts = [
+          { type: "text", text: "Hello" * 5 },
+          { type: "image_url", image_url: { url: "https://example.com/cat.png" } }
+        ]
+        message = { user: parts }
+        expect(adapter.transform(message)).to eq({ role: "user", content: parts })
+      end
     end
   end
 end
