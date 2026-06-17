@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+### Fixed
+- `Raix::MessageAdapters::Base` now applies Anthropic prompt caching for all Claude models, not just the `claude-3` family. The guard that converts large content into the multipart `cache_control` format only matched model ids containing `anthropic/claude-3`, so configuring `cache_at` on a Claude 4.x model (e.g. `anthropic/claude-sonnet-4`, `anthropic/claude-opus-4-7`) silently did nothing — content was sent uncached and the prompt-cache discount was never realized. The check now matches `anthropic/claude`, covering the current Claude 4.x ids alongside `claude-3`. Behavior for non-Claude models is unchanged.
+
 ## [2.0.5] - 2026-06-04
 
 ### Fixed

@@ -35,5 +35,15 @@ RSpec.describe Raix::MessageAdapters::Base do
       expected = { role: "user", content: [{ type: "text", text: "Hello" * 5, cache_control: { type: "ephemeral" } }] }
       expect(adapter.transform(message)).to eq(expected)
     end
+
+    context "with a Claude 4 model" do
+      let(:context) { double("Context", model: "anthropic/claude-sonnet-4", cache_at: 10) }
+
+      it "wraps large content with cache_control" do
+        message = { user: "Hello" * 5 }
+        expected = { role: "user", content: [{ type: "text", text: "Hello" * 5, cache_control: { type: "ephemeral" } }] }
+        expect(adapter.transform(message)).to eq(expected)
+      end
+    end
   end
 end

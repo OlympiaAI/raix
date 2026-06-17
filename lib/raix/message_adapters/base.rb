@@ -39,8 +39,8 @@ module Raix
         else
           raise ArgumentError, "Invalid message format: #{message.inspect}"
         end.tap do |msg|
-          # convert to anthropic multipart format if model is claude-3 and cache_at is set
-          if model.to_s.include?("anthropic/claude-3") && cache_at && msg[:content].to_s.length > cache_at.to_i
+          # convert to anthropic multipart format if model is an anthropic claude and cache_at is set
+          if model.to_s.include?("anthropic/claude") && cache_at && msg[:content].to_s.length > cache_at.to_i
             msg[:content] = [{ type: "text", text: msg[:content], cache_control: { type: "ephemeral" } }]
           end
         end
