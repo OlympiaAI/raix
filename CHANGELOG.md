@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Fixed
+- `max_tool_calls` is now enforced under the RubyLLM backend. RubyLLM drives the tool-call loop internally (`complete` → `handle_tool_calls` → `complete`) and only returns once the model stops calling tools, so the counting loop in `Raix::ChatCompletion` never saw a tool round — `max_tool_calls` was dead code and agentic loops ran unbounded. The budget is now enforced inside the generated `FunctionToolAdapter` tool wrapper, which increments a per-completion counter on each invocation and returns a `RubyLLM::Tool::Halt` (refusing to run the underlying function) once the count exceeds the budget. Enforcement is per call because a single model response can pack several parallel tool calls, all of which RubyLLM executes in one round even after one halts. On a halt, `chat_completion` issues one final completion with no tools (and drops `tool_choice`) and returns its text, appending the existing `"Maximum tool calls (N) exceeded…"` system message.
+- `stop_tool_calls_and_respond!` works again. It set a flag that only the (now unreachable) counting loop read, so under RubyLLM it did nothing. The tool wrapper now checks the flag after a successful tool execution and halts the loop, forcing a final text response.
+- `Raix::ChatCompletion` no longer crashes when RubyLLM's tool loop is halted. `chat.complete`/`#ask` return a `RubyLLM::Tool::Halt` (not a `Message`) in that case, and the response conversion called `#raw` / `#input_tokens` on it. `ruby_llm_request` now detects the `Halt` and hands it back for final-response handling.
+- Assistant tool-call messages replayed from the transcript into a fresh `RubyLLM::Chat` are now translated from Raix's OpenAI-style array-of-hashes shape into the `{ id => RubyLLM::ToolCall }` shape RubyLLM's providers expect. Previously this path (reachable via the forced final completion above) raised `NoMethodError: undefined method 'id' for nil` while rendering the request payload.
+
 ## [2.0.5] - 2026-06-04
 
 ### Fixed
