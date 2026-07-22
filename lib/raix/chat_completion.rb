@@ -149,6 +149,15 @@ module Raix
       run_before_completion_hooks(params, messages)
 
       begin
+        # Snapshot the transcript length before the request. If a generated tool
+        # halts RubyLLM's loop, force_final_response_after_halt uses this to
+        # recover exactly the assistant/tool messages appended while executing
+        # tools and replay them after the original messages — which may not live
+        # in the transcript at all when `messages:` was passed explicitly. Only
+        # tools can trigger a halt, so skip the transcript read entirely when
+        # none are registered.
+        transcript_size_before = params[:tools].present? ? transcript.flatten.compact.size : 0
+
         response = ruby_llm_request(params:, model: openai || model, messages:, openai_override: openai)
 
         # RubyLLM runs the entire tool-call loop inside chat.complete/#ask. When
@@ -157,7 +166,9 @@ module Raix
         # RubyLLM::Tool::Halt rather than a Message. Re-issue one final
         # completion with no tools; the shared handling below then returns its
         # text/JSON as usual.
-        response = force_final_response_after_halt(response, params:, openai:) if response.is_a?(RubyLLM::Tool::Halt)
+        if response.is_a?(RubyLLM::Tool::Halt)
+          response = force_final_response_after_halt(response, params:, openai:, messages:, transcript_size_before:)
+        end
 
         retry_count = 0
         content = nil
@@ -322,14 +333,20 @@ module Raix
 
     private
 
-    # Issues the single final completion after RubyLLM's tool loop was halted.
-    # Rebuilds the conversation from the transcript — FunctionDispatch has
-    # already appended an assistant/tool message pair for every tool call that
-    # ran before the halt, so the transcript carries the full tool exchange —
+    # Issues the single final completion after RubyLLM's tool loop was halted,
     # then completes once with no tools and returns the OpenAI-compatible hash.
-    def force_final_response_after_halt(halt, params:, openai:)
+    #
+    # The final request is rebuilt from the original `messages` (the transcript
+    # or the caller-supplied `messages:` argument that drove the first request)
+    # plus the assistant/tool exchange FunctionDispatch appended while executing
+    # tools before the halt. `transcript_size_before` marks where that exchange
+    # begins, so the caller's system/user prompt is preserved even when it was
+    # never written into the transcript — otherwise the forced final call would
+    # answer from tool results (or stale transcript) alone.
+    def force_final_response_after_halt(halt, params:, openai:, messages:, transcript_size_before:)
       adapter = MessageAdapters::Base.new(self)
-      messages = transcript.flatten.compact.map { |msg| adapter.transform(msg) }
+      tool_exchange = transcript.flatten.compact.drop(transcript_size_before).map { |msg| adapter.transform(msg) }
+      messages += tool_exchange
 
       reason = halt.content
       if reason.is_a?(FunctionToolAdapter::ToolCallsCapReached)

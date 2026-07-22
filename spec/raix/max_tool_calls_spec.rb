@@ -17,7 +17,7 @@
 # with the chat and the 1-based completion number so a spec can run tools on the
 # first pass and return a final message on the forced second pass.
 class ScriptedRubyLLMChat
-  attr_reader :instructions, :tools, :with_tool_count, :complete_count, :tool_count_at_complete
+  attr_reader :instructions, :tools, :with_tool_count, :complete_count, :tool_count_at_complete, :requests
 
   def initialize(&behavior)
     @behavior = behavior
@@ -26,14 +26,25 @@ class ScriptedRubyLLMChat
     @with_tool_count = 0
     @complete_count = 0
     @tool_count_at_complete = []
+    # Per-completion capture: each entry records the instructions and messages
+    # applied to this chat since the previous completion, so a spec can inspect
+    # exactly what the forced final (tool-less) request was rebuilt from.
+    @requests = []
+    @current_instructions = []
+    @current_messages = []
   end
 
   def with_instructions(content, **)
     @instructions << content
+    @current_instructions << content
     self
   end
 
-  def add_message(**) = self
+  def add_message(**attrs)
+    @current_messages << attrs
+    self
+  end
+
   def reset_messages!; end
   def messages = []
   def with_temperature(_) = self
@@ -50,7 +61,11 @@ class ScriptedRubyLLMChat
   def complete(&)
     @complete_count += 1
     @tool_count_at_complete << @with_tool_count
-    @behavior.call(self, @complete_count)
+    result = @behavior.call(self, @complete_count)
+    @requests << { instructions: @current_instructions.dup, messages: @current_messages.dup }
+    @current_instructions = []
+    @current_messages = []
+    result
   end
 end
 
@@ -75,6 +90,24 @@ class ToolBudgetProbe
     @work_executions = 0
     @finish_executions = 0
     transcript << { user: "please work" }
+  end
+end
+
+# Exercises the documented `messages:` argument, which drives the request
+# without ever being written into the transcript.
+class ExplicitMessagesProbe
+  include Raix::ChatCompletion
+  include Raix::FunctionDispatch
+
+  attr_reader :work_executions
+
+  function :do_work, "does a unit of work", n: { type: "integer" } do |_args|
+    @work_executions += 1
+    "work result #{@work_executions}"
+  end
+
+  def initialize
+    @work_executions = 0
   end
 end
 
@@ -248,6 +281,52 @@ RSpec.describe Raix::ChatCompletion, "max_tool_calls enforcement under RubyLLM" 
       expect(response).to eq("plain text answer")
       expect(fake_chat.with_tool_count).to eq(0)
       expect(fake_chat.complete_count).to eq(1)
+    end
+  end
+
+  # Regression for the Codex finding: when chat_completion is driven by the
+  # documented `messages:` argument, those messages never enter the transcript.
+  # The forced final completion after a halt must still carry the caller's
+  # system/user prompt, not just the tool exchange recorded in the transcript.
+  context "when driven by an explicit messages: argument and a tool halts" do
+    subject(:probe) { ExplicitMessagesProbe.new }
+
+    let(:messages) do
+      [{ system: "You are a helpful assistant" }, { user: "Do some work then summarize" }]
+    end
+
+    let(:behavior) do
+      lambda do |chat, n|
+        if n == 1
+          halt = nil
+          10.times do
+            result = chat.tools[:do_work].call({ n: 1 })
+            if result.is_a?(RubyLLM::Tool::Halt)
+              halt = result
+              break
+            end
+          end
+          halt || raise("expected the wrapper to halt but it never did")
+        else
+          final_message("final answer from explicit messages")
+        end
+      end
+    end
+
+    it "replays the caller-provided system and user messages into the forced final completion" do
+      response = probe.chat_completion(messages:, max_tool_calls: 1)
+
+      expect(response).to eq("final answer from explicit messages")
+
+      final_request = fake_chat.requests.last
+      # The original system prompt survives into the tool-less final request...
+      expect(final_request[:instructions]).to include("You are a helpful assistant")
+      # ...as does the original user message (not just the tool exchange).
+      user_contents = final_request[:messages].select { |m| m[:role] == :user }.map { |m| m[:content] }
+      expect(user_contents).to include("Do some work then summarize")
+      # And the tool result still rides along so the model can use it.
+      tool_contents = final_request[:messages].select { |m| m[:role] == :tool }.map { |m| m[:content] }
+      expect(tool_contents).to include("work result 1")
     end
   end
 end
