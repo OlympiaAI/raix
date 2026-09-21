@@ -523,6 +523,10 @@ module Raix
             content:,
             tool_call_id: msg[:tool_call_id] || msg["tool_call_id"]
           )
+        else
+          # Anything else (including the legacy "function" role) has no
+          # RubyLLM equivalent. Say so rather than dropping it silently.
+          warn "Raix: skipping message with unsupported role #{role.inspect}; RubyLLM accepts system, user, assistant, and tool"
         end
       end
 
@@ -545,7 +549,7 @@ module Raix
       # Handle tools - convert Raix function declarations to RubyLLM tools.
       # params[:tools] already reflects `available_tools`, so only the
       # functions it names are registered with the chat.
-      if params[:tools].present? && respond_to?(:class) && self.class.respond_to?(:functions)
+      if params[:tools].present? && self.class.respond_to?(:functions)
         chat.with_tools(*FunctionToolAdapter.convert_tools_for_ruby_llm(self, only: tool_names_from(params[:tools])))
       end
 

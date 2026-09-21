@@ -75,6 +75,10 @@ vulnerable version.
 - `save_response: false` keeps a call's tool exchanges out of the transcript as well
   as its final answer. A nested `chat_completion` inside a tool body that passes it
   therefore leaves no trace in the outer conversation's history.
+- `chat_completion` works on a copy of `params`, so a Hash the caller reuses across
+  calls is no longer mutated.
+- A transcript message whose role RubyLLM does not accept (including the legacy
+  `function` role) is skipped with a warning instead of silently.
 - A tool call for a function that was not offered on the request (excluded by
   `available_tools`, or never declared) is answered with a refusal result the model
   can recover from, instead of raising `"Unauthorized function call"` after earlier

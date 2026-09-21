@@ -109,6 +109,16 @@ RSpec.describe Raix::ChatCompletion, "#ruby_llm_request response shape" do
     expect(response.dig("usage", "prompt_tokens")).to eq(1)
   end
 
+  it "warns instead of silently dropping a message whose role RubyLLM does not support" do
+    messages = [{ role: "user", content: "hi" }, { role: "function", name: "legacy", content: "result" }]
+
+    expect do
+      instance.send(:ruby_llm_request, params: {}, model: "m", messages:)
+    end.to output(/unsupported role "function"/).to_stderr
+
+    expect(fake_chat).to have_received(:add_message).once
+  end
+
   it "forwards the output token ceiling to RubyLLM, preferring max_completion_tokens" do
     instance.send(:ruby_llm_request, params: { max_tokens: 50, max_completion_tokens: 20 }, model: "m", messages: [{ role: "user", content: "hi" }])
     expect(fake_chat).to have_received(:with_max_output_tokens).with(20)
