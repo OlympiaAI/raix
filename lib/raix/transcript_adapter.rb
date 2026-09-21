@@ -41,7 +41,7 @@ module Raix
 
     # Clear all messages
     def clear
-      @ruby_llm_chat.reset_messages!
+      @ruby_llm_chat.messages = []
       @pending_messages.clear
       self
     end
@@ -63,8 +63,10 @@ module Raix
     def add_message_from_hash(hash)
       # Raix abbreviated format: { system: "text" }, { user: "text" }, { assistant: "text" }
       if hash.key?(:system) || hash.key?("system")
+        # Pending only, like every other role. Writing it into the memoized
+        # chat as well sent each system prompt twice and rejected structured
+        # (array) content before ChatCompletion could translate it.
         content = hash[:system] || hash["system"]
-        @ruby_llm_chat.with_instructions(content)
         @pending_messages << { role: "system", content: }
       elsif hash.key?(:user) || hash.key?("user")
         content = hash[:user] || hash["user"]

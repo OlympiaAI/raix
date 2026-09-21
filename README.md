@@ -6,7 +6,7 @@ Raix (pronounced "ray" because the x is silent) is a library that gives you ever
 
 Understanding how to use discrete AI components in otherwise normal code is key to productively leveraging Raix, and the subject of a book written by Raix's author Obie Fernandez, titled [Patterns of Application Development Using AI](https://leanpub.com/patterns-of-application-development-using-ai). You can easily support the ongoing development of this project by buying the book at Leanpub.
 
-Raix 2.0 is powered by [RubyLLM](https://github.com/crmne/ruby_llm), giving you unified access to OpenAI, Anthropic, Google Gemini, and dozens of other providers through OpenRouter. Note that you can use Raix to add AI capabilities to non-Rails applications as long as you include ActiveSupport as a dependency.
+Raix 3.0 is powered by [RubyLLM](https://github.com/crmne/ruby_llm), giving you unified access to OpenAI, Anthropic, Google Gemini, and dozens of other providers through OpenRouter. Note that you can use Raix to add AI capabilities to non-Rails applications as long as you include ActiveSupport as a dependency.
 
 ### Chat Completions
 
@@ -855,7 +855,7 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ### Configuration
 
-Raix 2.0 uses [RubyLLM](https://github.com/crmne/ruby_llm) as its backend for LLM provider connections. Configure your API keys through RubyLLM:
+Raix 3.0 uses [RubyLLM](https://github.com/crmne/ruby_llm) as its backend for LLM provider connections. Configure your API keys through RubyLLM:
 
 ```ruby
 # config/initializers/raix.rb

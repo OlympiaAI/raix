@@ -71,6 +71,17 @@ module Raix
     # @option max_tool_calls [Integer] :max_tool_calls Maximum number of tool calls before forcing a text response. Defaults to the configured value.
     # @return [String|Hash] The completed chat response.
     def chat_completion(params: {}, loop: false, json: false, raw: false, openai: nil, save_response: true, messages: nil, available_tools: nil, max_tool_calls: nil)
+      complete_conversation(params:, loop:, json:, raw:, openai:, save_response:, messages:, available_tools:, max_tool_calls:)
+    end
+
+    # The body of chat_completion. Continuation rounds after a tool call recurse
+    # here directly rather than through the public method, which a subclass may
+    # override with a different signature (PromptDeclarations does).
+    def complete_conversation(params: {}, loop: false, json: false, raw: false, openai: nil, save_response: true, messages: nil, available_tools: nil, max_tool_calls: nil)
+      # Work on a copy: defaults are filled in and tool_choice is dropped between
+      # rounds, and none of that should leak into a Hash the caller may reuse.
+      params = params.dup
+
       # set params to default values if not provided
       params[:cache_at] ||= cache_at.presence
       params[:frequency_penalty] ||= frequency_penalty.presence
@@ -79,7 +90,11 @@ module Raix
       params[:max_completion_tokens] ||= max_completion_tokens.presence || configuration.max_completion_tokens
       params[:max_tokens] ||= max_tokens.presence || configuration.max_tokens
       params[:min_p] ||= min_p.presence
-      params[:prediction] = { type: "content", content: params[:prediction] || prediction } if params[:prediction] || prediction.present?
+      if (predicted = params[:prediction] || prediction.presence)
+        # Continuation rounds pass an already-wrapped prediction back through
+        # here, so only wrap a bare value.
+        params[:prediction] = predicted.is_a?(Hash) && predicted.with_indifferent_access[:type] == "content" ? predicted : { type: "content", content: predicted }
+      end
       params[:presence_penalty] ||= presence_penalty.presence
       params[:provider] ||= provider.presence
       params[:repetition_penalty] ||= repetition_penalty.presence
@@ -87,7 +102,10 @@ module Raix
       params[:seed] ||= seed.presence
       params[:stop] ||= stop.presence
       params[:temperature] ||= temperature.presence || configuration.temperature
-      params[:tool_choice] ||= tool_choice.presence
+      # A forced tool_choice applies to the first round only. Continuation
+      # rounds (depth > 0) leave it unset so the model can answer in text once
+      # its tool results are in.
+      params[:tool_choice] ||= tool_choice.presence if @tool_loop_depth.to_i.zero?
       params[:tools] = if available_tools == false
                          nil
                        elsif available_tools.is_a?(Array)
@@ -103,14 +121,10 @@ module Raix
       json = true if params[:response_format].is_a?(Raix::ResponseFormat)
 
       if json
-        unless openai
-          params[:provider] ||= {}
-          params[:provider][:require_parameters] = true
-        end
-        if params[:response_format].blank?
-          params[:response_format] ||= {}
-          params[:response_format][:type] = "json_object"
-        end
+        # Build fresh nested hashes rather than writing into ones the caller
+        # handed us; the dup above is shallow.
+        params[:provider] = (params[:provider] || {}).merge(require_parameters: true) unless openai
+        params[:response_format] = { type: "json_object" } if params[:response_format].blank?
       end
 
       # Deprecation warning for loop parameter
@@ -121,16 +135,8 @@ module Raix
       # Set max_tool_calls from parameter or configuration default
       self.max_tool_calls = max_tool_calls || configuration.max_tool_calls
 
-      # Reset stop_tool_calls_and_respond flag
-      @stop_tool_calls_and_respond = false
-
       # Track tool call count
       tool_call_count = 0
-
-      # Reset the per-completion tool-call counter that FunctionToolAdapter's
-      # generated wrappers use to enforce max_tool_calls under the RubyLLM
-      # backend (see #increment_tool_call_count).
-      @tool_call_count = 0
 
       # set the model to the default if not provided
       self.model ||= configuration.model
@@ -148,98 +154,118 @@ module Raix
       # Hooks can modify params and messages for logging, filtering, PII redaction, etc.
       run_before_completion_hooks(params, messages)
 
+      # Each continuation after a tool round recurses with the allowance that is
+      # left, so remember the budget the caller actually asked for. That is the
+      # number the limit message has to quote.
+      @tool_loop_depth = @tool_loop_depth.to_i + 1
+      @max_tool_calls_budget = self.max_tool_calls if @tool_loop_depth == 1
+
+      # Start this loop with a clear stop flag and hand back whatever was set
+      # on entry when it returns. A nested chat_completion inside a tool body
+      # must neither erase a stop the enclosing loop's tool already requested
+      # nor leak its own stop into that loop.
+      stop_on_entry = @stop_tool_calls_and_respond
+      @stop_tool_calls_and_respond = false
+
+      # True only while parsing the model's final JSON response. The blank-JSON
+      # retry below must never fire for a JSON::ParserError raised by a tool
+      # body (in this frame or a continuation round), which would re-issue the
+      # request and run tools again.
+      parsing_response = false
+
       begin
-        # Snapshot the transcript length before the request. If a generated tool
-        # halts RubyLLM's loop, force_final_response_after_halt uses this to
-        # recover exactly the assistant/tool messages appended while executing
-        # tools and replay them after the original messages — which may not live
-        # in the transcript at all when `messages:` was passed explicitly. Only
-        # tools can trigger a halt, so skip the transcript read entirely when
-        # none are registered.
-        transcript_size_before = params[:tools].present? ? transcript.flatten.compact.size : 0
-
         response = ruby_llm_request(params:, model: openai || model, messages:, openai_override: openai)
-
-        # RubyLLM runs the entire tool-call loop inside chat.complete/#ask. When
-        # a generated tool halts that loop — because max_tool_calls was exceeded
-        # or stop_tool_calls_and_respond! was called — the return value is a
-        # RubyLLM::Tool::Halt rather than a Message. Re-issue one final
-        # completion with no tools; the shared handling below then returns its
-        # text/JSON as usual.
-        if response.is_a?(RubyLLM::Tool::Halt)
-          response = force_final_response_after_halt(response, params:, openai:, messages:, transcript_size_before:)
-        end
 
         retry_count = 0
         content = nil
 
-        # no need for additional processing if streaming
-        return if stream && response.blank?
+        # Nothing came back to process (a streamed request that produced no message).
+        return if response.blank?
 
         # tuck the full response into a thread local in case needed
-        Thread.current[:chat_completion_response] = response.is_a?(Hash) ? response.with_indifferent_access : response
+        Thread.current[:chat_completion_response] = response.with_indifferent_access
 
         # TODO: add a standardized callback hook for usage events
         # broadcast(:usage_event, usage_subject, self.class.name.to_s, response, premium?)
 
-        tool_calls = response.dig("choices", 0, "message", "tool_calls") || []
+        # The model's own turn, kept intact (tool calls with their ids and
+        # signatures, reasoning details) so it can be replayed verbatim.
+        assistant_turn = (response.dig("choices", 0, "message") || {}).with_indifferent_access
+        tool_calls = assistant_turn[:tool_calls] || []
         if tool_calls.any?
-          tool_call_count += tool_calls.size
+          # Enforce the budget per call rather than per round: a single model
+          # response can pack several parallel tool calls, and the ones that
+          # still fit under the cap should run.
+          allowance = [self.max_tool_calls - tool_call_count, 0].max
+          cap_exceeded = tool_calls.size > allowance
+          tool_call_count += [tool_calls.size, allowance].min
 
-          # Check if we've exceeded max_tool_calls
-          if tool_call_count > self.max_tool_calls
-            # Add system message about hitting the limit
-            messages << { role: "system", content: "Maximum tool calls (#{self.max_tool_calls}) exceeded. Please provide a final response to the user without calling any more tools." }
+          # A call is authorized only if the function is declared on this class
+          # AND was offered on this request (the available_tools-filtered set).
+          # Declared-only would let a hidden tool through; offered-only would
+          # trust a hook-supplied name.
+          declared = self.class.respond_to?(:functions) ? Array(self.class.functions).map { |function| function[:name].to_s } : []
+          offered = tool_names_from(params[:tools]) & declared
 
-            # Force a final response without tools
-            params[:tools] = nil
-            response = ruby_llm_request(params:, model: openai || model, messages:, openai_override: openai)
+          # Every call the model made gets a result message, refused ones
+          # included, so the exchange replayed to the provider stays well-formed.
+          # Results accumulate as tools run: if one raises, the exchange is
+          # still recorded (failure and unexecuted calls spelled out) before the
+          # error propagates, so a retry sees what already happened.
+          tool_results = []
+          begin
+            tool_calls.each_with_index do |tool_call, index| # TODO: parallelize this?
+              result = if index < allowance
+                         execute_tool_call(tool_call, offered:)
+                       else
+                         "Tool call refused: maximum tool calls (#{@max_tool_calls_budget}) exceeded."
+                       end
 
-            # Process the final response
-            content = response.dig("choices", 0, "message", "content")
-            transcript << { assistant: content } if save_response
-            return raw ? response : content.to_s.strip
+              tool_results << tool_result_message(tool_call, result)
+            end
+          rescue StandardError => e
+            # The exception class is recorded, not its message: error text can
+            # carry response bodies, SQL, or credentials the model must not see.
+            failed, *unexecuted = tool_calls.drop(tool_results.size)
+            tool_results << tool_result_message(failed, "Tool call failed (#{e.class}).") if failed
+            unexecuted.each { |tool_call| tool_results << tool_result_message(tool_call, "Not executed: an earlier tool call in this batch failed.") }
+            transcript << [assistant_turn, *tool_results] if save_response
+            raise
           end
 
-          # Dispatch tool calls
-          tool_calls.each do |tool_call| # TODO: parallelize this?
-            # dispatch the called function
-            function_name = tool_call["function"]["name"]
-            arguments = JSON.parse(tool_call["function"]["arguments"].presence || "{}")
-            raise "Unauthorized function call: #{function_name}" unless self.class.functions.map { |f| f[:name].to_sym }.include?(function_name.to_sym)
+          # Record the authoritative exchange (the model's ids and signatures,
+          # not synthetic ones) so a later chat_completion on this transcript can
+          # replay it faithfully, then continue from it. `save_response: false`
+          # keeps the exchange out of the transcript along with the final answer,
+          # which is how a nested chat_completion inside a tool body keeps its
+          # internal rounds out of the outer conversation's history.
+          transcript << [assistant_turn, *tool_results] if save_response
+          messages += [assistant_turn, *tool_results]
 
-            dispatch_tool_function(function_name, arguments.with_indifferent_access)
-          end
+          # A cap breach or stop_tool_calls_and_respond! ends the conversation
+          # with one final, tool-less completion that goes through the same
+          # response handling below. Otherwise let the AI process the tool
+          # results and either answer or call more tools.
+          if cap_exceeded || @stop_tool_calls_and_respond
+            response = force_final_response(params:, openai:, messages:, cap_exceeded:)
+            Thread.current[:chat_completion_response] = response.with_indifferent_access
+          else
+            # Drop a forced tool_choice before continuing, the way
+            # force_final_response does: re-sending "required" (or a named
+            # function) on every round would keep the model calling tools until
+            # the budget ran out instead of letting it answer.
+            params.delete(:tool_choice)
 
-          # After executing tool calls, we need to continue the conversation
-          # to let the AI process the results and provide a text response.
-          # We continue until the AI responds with a regular assistant message
-          # (not another tool call request), unless stop_tool_calls_and_respond! was called.
-
-          # Use the updated transcript for the next call, not the original messages
-          updated_messages = transcript.flatten.compact
-          last_message = updated_messages.last
-
-          if !@stop_tool_calls_and_respond && (last_message[:role] != "assistant" || last_message[:tool_calls].present?)
-            # Send the updated transcript back to the AI
-            return chat_completion(
+            return complete_conversation(
               params:,
               json:,
               raw:,
               openai:,
               save_response:,
-              messages: nil, # Use transcript instead
+              messages:,
               available_tools:,
               max_tool_calls: self.max_tool_calls - tool_call_count
             )
-          elsif @stop_tool_calls_and_respond
-            # If stop_tool_calls_and_respond was set, force a final response without tools
-            params[:tools] = nil
-            response = ruby_llm_request(params:, model: openai || model, messages:, openai_override: openai)
-
-            content = response.dig("choices", 0, "message", "content")
-            transcript << { assistant: content } if save_response
-            return raw ? response : content.to_s.strip
           end
         end
 
@@ -253,12 +279,16 @@ module Raix
             # Make automatic JSON parsing available to non-OpenAI providers that don't support the response_format parameter
             content = content.match(%r{<json>(.*?)</json>}m)[1] if content.include?("<json>")
 
+            parsing_response = true
             return JSON.parse(content)
           end
 
           return content unless raw
         end
       rescue JSON::ParserError => e
+        # Only a parse failure of the model's own response is worth a retry.
+        raise e unless parsing_response
+
         if e.message.include?("not a valid") # blank JSON
           warn "Retrying blank JSON response... (#{retry_count} attempts) #{e.message}"
           retry_count += 1
@@ -274,8 +304,13 @@ module Raix
         # make sure we see the actual error message on console or Honeybadger
         warn "Chat completion failed!!!!!!!!!!!!!!!!: #{e.response[:body]}"
         raise e
+      ensure
+        @tool_loop_depth -= 1
+        @max_tool_calls_budget = nil if @tool_loop_depth.zero?
+        @stop_tool_calls_and_respond = stop_on_entry
       end
     end
+    private :complete_conversation
 
     # This method returns the transcript array.
     # Manually add your messages to it in the following abbreviated format
@@ -308,7 +343,7 @@ module Raix
                      :openrouter
                    end
 
-        RubyLLM.chat(model: model_id, provider:, assume_model_exists: true)
+        RubyLLM.chat(model: model_id, provider:, protocol: :chat_completions, assume_model_exists: true)
       end
     end
 
@@ -323,35 +358,63 @@ module Raix
       public_send(function_name, arguments, cache)
     end
 
-    # Increments and returns the per-completion tool-call counter. Called by the
-    # generated FunctionToolAdapter wrappers to enforce max_tool_calls: RubyLLM
-    # runs the whole tool loop inside a single chat.complete, so Raix never sees
-    # the individual rounds and has to count from inside the tool. Internal API.
-    def increment_tool_call_count
-      @tool_call_count = @tool_call_count.to_i + 1
-    end
-
     private
 
-    # Issues the single final completion after RubyLLM's tool loop was halted,
-    # then completes once with no tools and returns the OpenAI-compatible hash.
-    #
-    # The final request is rebuilt from the original `messages` (the transcript
-    # or the caller-supplied `messages:` argument that drove the first request)
-    # plus the assistant/tool exchange FunctionDispatch appended while executing
-    # tools before the halt. `transcript_size_before` marks where that exchange
-    # begins, so the caller's system/user prompt is preserved even when it was
-    # never written into the transcript — otherwise the forced final call would
-    # answer from tool results (or stale transcript) alone.
-    def force_final_response_after_halt(halt, params:, openai:, messages:, transcript_size_before:)
-      adapter = MessageAdapters::Base.new(self)
-      tool_exchange = transcript.flatten.compact.drop(transcript_size_before).map { |msg| adapter.transform(msg) }
-      messages += tool_exchange
+    # Runs one tool call with this loop's bookkeeping shielded from
+    # re-entrancy. FunctionDispatch executes tool bodies on this same instance,
+    # so a tool that calls chat_completion again (a sub-agent pattern) would
+    # otherwise overwrite the outer loop's max_tool_calls, depth and budget,
+    # and reset a stop flag an earlier tool in this batch raised. The nested
+    # call starts from a clean slate and the outer values come back afterwards.
+    def dispatch_preserving_loop_state(function_name, arguments)
+      saved = [max_tool_calls, @tool_loop_depth, @max_tool_calls_budget, @stop_tool_calls_and_respond]
 
-      reason = halt.content
-      if reason.is_a?(FunctionToolAdapter::ToolCallsCapReached)
-        messages << { role: "system",
-                      content: "Maximum tool calls (#{reason.max_tool_calls}) exceeded. Please provide a final response to the user without calling any more tools." }
+      @tool_loop_depth = 0
+      @max_tool_calls_budget = nil
+      @stop_tool_calls_and_respond = false
+      dispatch_tool_function(function_name, arguments)
+    ensure
+      # A stop this tool requested belongs to this loop. A nested
+      # chat_completion puts back the flag it found on entry, so a stop raised
+      # inside it never shows up here.
+      stop_requested_here = @stop_tool_calls_and_respond
+      self.max_tool_calls, @tool_loop_depth, @max_tool_calls_budget, @stop_tool_calls_and_respond = saved
+      @stop_tool_calls_and_respond ||= stop_requested_here
+    end
+
+    def tool_result_message(tool_call, content)
+      { role: "tool", tool_call_id: tool_call[:id], name: tool_call.dig(:function, :name), content: content.to_s }
+    end
+
+    # Authorizes and runs one tool call from the model, returning the value the
+    # tool result message carries back. A call for a tool that was not offered,
+    # or with a malformed argument payload, is reported to the model as a tool
+    # error rather than raised: earlier calls in the same batch may already
+    # have done their work, and the model can recover from a result.
+    def execute_tool_call(tool_call, offered:)
+      function_name = tool_call.dig(:function, :name).to_s
+      return "Tool call refused: #{function_name} is not available on this request." unless offered.include?(function_name)
+
+      # Only a missing or empty payload means "no arguments"; whitespace or any
+      # other unparseable text is malformed and must not run the tool.
+      raw_arguments = tool_call.dig(:function, :arguments).to_s
+      begin
+        arguments = raw_arguments.empty? ? {} : JSON.parse(raw_arguments)
+      rescue JSON::ParserError
+        return "Invalid arguments for #{function_name}: malformed JSON"
+      end
+      return "Invalid arguments for #{function_name}: expected a JSON object, got #{arguments.class}" unless arguments.is_a?(Hash)
+
+      dispatch_preserving_loop_state(function_name, arguments.with_indifferent_access)
+    end
+
+    # Issues the single final completion that ends a conversation cut short by
+    # the max_tool_calls budget or by stop_tool_calls_and_respond!, and returns
+    # the OpenAI-compatible hash.
+    def force_final_response(params:, openai:, messages:, cap_exceeded:)
+      if cap_exceeded
+        messages += [{ role: "system",
+                       content: "Maximum tool calls (#{@max_tool_calls_budget}) exceeded. Please provide a final response to the user without calling any more tools." }]
       end
 
       # Force a final response without tools. Drop tool_choice as well: a
@@ -362,6 +425,13 @@ module Raix
       final_params.delete(:tool_choice)
 
       ruby_llm_request(params: final_params, model: openai || model, messages:, openai_override: openai)
+    end
+
+    # Function names declared by an OpenAI-shaped tools array. Tolerates string
+    # keys, since a before_completion hook may hand back tools that went
+    # through JSON.
+    def tool_names_from(tools)
+      Array(tools).map { |tool| tool.with_indifferent_access.dig(:function, :name).to_s }
     end
 
     def filtered_tools(tool_names)
@@ -404,114 +474,187 @@ module Raix
     def ruby_llm_request(params:, model:, messages:, openai_override: nil)
       # Create a temporary chat instance for this request
       provider = determine_provider(model, openai_override)
-      chat = RubyLLM.chat(model:, provider:, assume_model_exists: true)
+      chat = RubyLLM.chat(model:, provider:, protocol: :chat_completions, assume_model_exists: true)
 
-      # Apply messages to the chat
-      # Track if we have a user message to determine how to call ask
-      has_user_message = false
+      # Apply messages to the chat. Structured content arrays (multipart text,
+      # images, Anthropic-style cache_control) are taken apart first, because
+      # RubyLLM messages only carry String content.
+      caching = false
+      cache_ttl = nil
 
       messages.each do |msg|
         role = msg[:role] || msg["role"]
-        content = msg[:content] || msg["content"]
+        part = MultimodalContentAdapter.translate(msg[:content] || msg["content"])
+        content = part.content
+        caching ||= part.cache_boundary?
+        cache_ttl ||= part.cache_ttl
 
         case role.to_s
         when "system"
-          chat.with_instructions(content)
+          chat.with_instructions(content, append: true, cache_until_here: part.cache_boundary?)
         when "user"
-          has_user_message = true
-          chat.add_message(role: :user, content: MultimodalContentAdapter.translate(content))
+          # A user turn must carry content on the wire. With attachments RubyLLM
+          # builds the parts itself; without them nil would be dropped from the
+          # payload entirely, which providers reject.
+          content = "" if content.nil? && part.attachments.empty?
+          added = chat.add_message(role: :user, content:, attachments: part.attachments)
+          added.cache_until_here if part.cache_boundary?
         when "assistant"
-          if (tool_calls = msg[:tool_calls] || msg["tool_calls"])
-            chat.add_message(role: :assistant, content:, tool_calls: normalize_tool_calls_for_ruby_llm(tool_calls))
-          else
-            chat.add_message(role: :assistant, content:)
-          end
+          tool_calls = msg[:tool_calls] || msg["tool_calls"]
+          # RubyLLM requires the :content key even when nil (a tool-call turn);
+          # an assistant turn with neither content nor tool calls needs "" so
+          # the provider still receives a content field.
+          content = "" if content.nil? && tool_calls.blank?
+          attrs = { role: :assistant, content: }
+          attrs[:tool_calls] = normalize_tool_calls_for_ruby_llm(tool_calls) if tool_calls
+          # Signed reasoning has to make the round trip for multi-round tool use
+          # on models that require it (OpenRouter reasoning_details, Gemini
+          # thought signatures).
+          reasoning = {
+            raw_reasoning: msg[:raw_reasoning] || msg["raw_reasoning"],
+            thinking: msg[:thinking] || msg["thinking"],
+            thinking_signature: msg[:thinking_signature] || msg["thinking_signature"]
+          }.compact
+          added = chat.add_message(attrs.merge(reasoning))
+          added.cache_until_here if part.cache_boundary?
         when "tool"
           chat.add_message(
             role: :tool,
             content:,
             tool_call_id: msg[:tool_call_id] || msg["tool_call_id"]
           )
+        else
+          # Anything else (including the legacy "function" role) has no
+          # RubyLLM equivalent. Say so rather than dropping it silently.
+          warn "Raix: skipping message with unsupported role #{role.inspect}; RubyLLM accepts system, user, assistant, and tool"
         end
       end
+
+      # Render the cache boundaries marked above; without this RubyLLM sends no
+      # cache controls at all. A ttl from the content's cache_control rides along.
+      chat.with_caching({ ttl: cache_ttl }.compact) if caching
 
       # Apply configuration parameters
       chat.with_temperature(params[:temperature]) if params[:temperature]
+      if (max_output_tokens = params[:max_completion_tokens] || params[:max_tokens])
+        chat.with_max_output_tokens(max_output_tokens)
+      end
 
-      # Apply additional params (RubyLLM with_params expects keyword args)
+      # Apply additional params. RubyLLM sends provider options into the
+      # request payload verbatim, which is what these OpenAI/OpenRouter-shaped
+      # knobs (top_p, seed, response_format, provider routing, ...) expect.
       additional_params = params.compact.except(:temperature, :tools, :max_tokens, :max_completion_tokens)
-      chat.with_params(**additional_params) if additional_params.any?
+      chat.with_provider_options(additional_params) if additional_params.any?
 
-      # Handle tools - convert Raix function declarations to RubyLLM tools
-      if params[:tools].present? && respond_to?(:class) && self.class.respond_to?(:functions)
-        ruby_llm_tools = FunctionToolAdapter.convert_tools_for_ruby_llm(self)
-        ruby_llm_tools.each { |tool| chat.with_tool(tool) }
+      # Handle tools - convert Raix function declarations to RubyLLM tools.
+      # params[:tools] already reflects `available_tools`, so only the
+      # functions it names are registered with the chat.
+      if params[:tools].present? && self.class.respond_to?(:functions)
+        chat.with_tools(*FunctionToolAdapter.convert_tools_for_ruby_llm(self, only: tool_names_from(params[:tools])))
       end
 
-      # Execute the completion
-      if stream.present?
-        # Streaming mode
-        if has_user_message
-          chat.complete(&stream)
-        else
-          chat.ask(&stream)
-        end
-        nil # Return nil for streaming as per original behavior
-      else
-        # Non-streaming mode - return OpenAI-compatible response format
-        response_message = has_user_message ? chat.complete : chat.ask
+      # Execute the completion. Raix drives the tool loop itself (see
+      # #chat_completion), so this asks RubyLLM for exactly one completion and
+      # leaves any tool calls in the response unexecuted. A streaming request
+      # yields chunks to the block and still returns the assembled message, so
+      # tool calls made mid-stream get dispatched like any other.
+      response_message = stream.present? ? chat.generate(&stream) : chat.generate
+      return nil if response_message.nil?
 
-        # A generated tool can halt RubyLLM's internal tool loop (max_tool_calls
-        # exceeded or stop_tool_calls_and_respond!). When that happens
-        # chat.complete/#ask returns a RubyLLM::Tool::Halt, not a Message, so it
-        # has no #raw / #input_tokens. Hand it straight back to chat_completion,
-        # which forces a final tool-less completion.
-        return response_message if response_message.is_a?(RubyLLM::Tool::Halt)
+      # Pull through the raw provider payload when available. OpenRouter's
+      # `id` is the only handle we have to look up authoritative billing
+      # cost via /api/v1/generation, and callers that watch the response
+      # snapshot for `model` / cached-token counts shouldn't have to break
+      # out of the OpenAI-compatible shape to get them.
+      raw_body = response_message.raw.respond_to?(:body) ? response_message.raw.body : nil
+      raw_body = {} unless raw_body.is_a?(Hash)
+      upstream_usage = raw_body["usage"].is_a?(Hash) ? raw_body["usage"] : {}
 
-        # Pull through the raw provider payload when available. OpenRouter's
-        # `id` is the only handle we have to look up authoritative billing
-        # cost via /api/v1/generation, and callers that watch the response
-        # snapshot for `model` / cached-token counts shouldn't have to break
-        # out of the OpenAI-compatible shape to get them.
-        raw_body = response_message.raw.respond_to?(:body) ? response_message.raw.body : nil
-        raw_body = {} unless raw_body.is_a?(Hash)
+      # Prefer the provider's own counts. RubyLLM's input figure excludes cached
+      # tokens, and only the provider knows the authoritative totals; its
+      # prompt_tokens_details / completion_tokens_details ride along untouched.
+      tokens = response_message.tokens
+      prompt_tokens = upstream_usage["prompt_tokens"] || [tokens.input, tokens.cache_read, tokens.cache_write].compact.sum
+      completion_tokens = upstream_usage["completion_tokens"] || tokens.output
+      usage_payload = upstream_usage.merge(
+        "prompt_tokens" => prompt_tokens,
+        "completion_tokens" => completion_tokens,
+        "total_tokens" => upstream_usage["total_tokens"] || (prompt_tokens.to_i + completion_tokens.to_i)
+      )
 
-        usage_payload = {
-          "prompt_tokens" => response_message.input_tokens,
-          "completion_tokens" => response_message.output_tokens,
-          "total_tokens" => (response_message.input_tokens || 0) + (response_message.output_tokens || 0)
-        }
-
-        # Merge prompt_tokens_details / completion_tokens_details (cached tokens,
-        # reasoning tokens) when the provider supplied them.
-        if (upstream_usage = raw_body["usage"]).is_a?(Hash)
-          upstream_usage.each do |key, value|
-            next if usage_payload.key?(key)
-
-            usage_payload[key] = value
-          end
-        end
-
-        {
-          "id" => raw_body["id"],
-          "model" => raw_body["model"] || response_message.model_id,
-          "provider" => raw_body["provider"],
-          "choices" => [
-            {
-              "message" => {
-                "role" => "assistant",
-                "content" => response_message.content,
-                "tool_calls" => response_message.tool_calls
-              },
-              "finish_reason" => response_message.tool_call? ? "tool_calls" : "stop"
-            }
-          ],
-          "usage" => usage_payload
-        }
+      # The assistant turn carries what a continuation round has to replay:
+      # tool calls with their ids and signatures, plus any signed reasoning.
+      message = {
+        "role" => "assistant",
+        "content" => response_message.content,
+        "tool_calls" => serialize_tool_calls(response_message.tool_calls)
+      }
+      message["raw_reasoning"] = response_message.raw_reasoning if response_message.raw_reasoning
+      if (thinking = response_message.thinking)
+        message["thinking"] = thinking.text
+        message["thinking_signature"] = thinking.signature
       end
+
+      {
+        "id" => raw_body["id"],
+        "model" => raw_body["model"] || response_message.model,
+        "provider" => raw_body["provider"],
+        "choices" => [
+          {
+            "message" => message,
+            "finish_reason" => response_message.tool_call? ? "tool_calls" : "stop"
+          }
+        ],
+        "usage" => usage_payload
+      }
+    rescue RubyLLM::ToolCallParseError => e
+      # RubyLLM rejects a response whose tool arguments are not valid JSON before
+      # Raix ever sees a Message. Rebuild the assistant turn from the raw payload
+      # so the loop can answer each call with a tool error instead of aborting.
+      response = assistant_turn_from_raw_response(e.response)
+      raise e unless response
+
+      response
     rescue StandardError => e
       warn "RubyLLM request failed: #{e.message}"
       raise e
+    end
+
+    # The OpenAI-compatible response hash for a provider payload RubyLLM could
+    # not parse into a Message, or nil when the payload has no tool calls to
+    # recover. Arguments stay as the provider sent them.
+    def assistant_turn_from_raw_response(raw)
+      body = raw.respond_to?(:body) ? raw.body : nil
+      return unless body.is_a?(Hash)
+
+      raw_message = body.dig("choices", 0, "message")
+      return unless raw_message.is_a?(Hash) && raw_message["tool_calls"].is_a?(Array)
+
+      # Replay keys tool calls by id, so a payload with missing or duplicate
+      # ids cannot be recovered into a valid exchange.
+      ids = raw_message["tool_calls"].map { |tool_call| tool_call["id"].to_s }
+      return if ids.any?(&:empty?) || ids.uniq.size != ids.size
+
+      # Keep the signed state RubyLLM would have extracted: OpenRouter's
+      # reasoning_details array and Gemini's per-call thought signature, which
+      # the wire nests under extra_content.google.
+      message = {
+        "role" => "assistant",
+        "content" => raw_message["content"],
+        "tool_calls" => raw_message["tool_calls"].map do |tool_call|
+          signature = tool_call.dig("extra_content", "google", "thought_signature")
+          signature ? tool_call.merge("thought_signature" => signature) : tool_call
+        end
+      }
+      message["raw_reasoning"] = raw_message["reasoning_details"] if raw_message["reasoning_details"].is_a?(Array)
+
+      {
+        "id" => body["id"],
+        "model" => body["model"],
+        "provider" => body["provider"],
+        "choices" => [{ "message" => message, "finish_reason" => "tool_calls" }],
+        "usage" => body["usage"].is_a?(Hash) ? body["usage"] : {}
+      }
     end
 
     def determine_provider(model, openai_override)
@@ -522,13 +665,46 @@ module Raix
       :openrouter
     end
 
+    # Renders RubyLLM's tool calls (a Hash keyed by call id whose values are
+    # RubyLLM::ToolCall) as OpenAI's array-of-hashes shape, which is what the
+    # response hash Raix hands back to callers — and its own tool loop — reads.
+    def serialize_tool_calls(tool_calls)
+      return nil if tool_calls.blank?
+
+      tool_calls.values.map do |tool_call|
+        serialized = {
+          "id" => tool_call.id,
+          "type" => "function",
+          "function" => {
+            "name" => tool_call.name,
+            "arguments" => tool_call.arguments.to_json
+          }
+        }
+        serialized["thought_signature"] = tool_call.thought_signature if tool_call.thought_signature
+        serialized
+      end
+    end
+
+    # Arguments replayed from a recorded tool call. RubyLLM re-serializes them
+    # as JSON, so a payload the provider sent malformed (already answered with
+    # a tool error) is replayed as an empty object rather than raising again.
+    def parse_replayed_arguments(arguments)
+      return {} if arguments.blank?
+
+      parsed = JSON.parse(arguments)
+      parsed.is_a?(Hash) ? parsed : {}
+    rescue JSON::ParserError
+      {}
+    end
+
     # Raix's transcript stores assistant tool calls in OpenAI's array-of-hashes
     # shape (`[{ id:, type:, function: { name:, arguments: } }]`), but RubyLLM's
     # providers format tool calls from a Hash keyed by call id whose values
     # respond to #id/#name/#arguments (RubyLLM::ToolCall). Translate so a
     # transcript that already contains tool exchanges can be replayed back into
-    # a fresh RubyLLM chat — notably for the forced final completion after a
-    # max_tool_calls / stop_tool_calls_and_respond! halt.
+    # a fresh RubyLLM chat on every continuation round, including the forced
+    # final completion after a max_tool_calls cap breach or
+    # stop_tool_calls_and_respond!.
     def normalize_tool_calls_for_ruby_llm(tool_calls)
       return tool_calls if tool_calls.is_a?(Hash) && tool_calls.values.all?(RubyLLM::ToolCall)
 
@@ -536,8 +712,8 @@ module Raix
         tc = raw.respond_to?(:with_indifferent_access) ? raw.with_indifferent_access : raw
         function = tc[:function] || {}
         arguments = function[:arguments]
-        arguments = JSON.parse(arguments) if arguments.is_a?(String) && arguments.present?
-        acc[tc[:id]] = RubyLLM::ToolCall.new(id: tc[:id], name: function[:name], arguments: arguments || {})
+        arguments = parse_replayed_arguments(arguments) if arguments.is_a?(String)
+        acc[tc[:id]] = RubyLLM::ToolCall.new(id: tc[:id], name: function[:name], arguments: arguments || {}, thought_signature: tc[:thought_signature])
       end
     end
   end

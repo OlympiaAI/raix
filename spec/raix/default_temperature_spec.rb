@@ -21,9 +21,10 @@ RSpec.describe Raix::ChatCompletion, "default temperature handling" do
       content: "ok",
       tool_calls: nil,
       tool_call?: false,
-      input_tokens: 1,
-      output_tokens: 1,
-      model_id: "anthropic/claude-opus-4-7",
+      tokens: RubyLLM::Tokens.new(input: 1, output: 1),
+      model: "anthropic/claude-opus-4-7",
+      raw_reasoning: nil,
+      thinking: nil,
       raw: nil
     )
   end
@@ -34,10 +35,11 @@ RSpec.describe Raix::ChatCompletion, "default temperature handling" do
       with_instructions: nil,
       add_message: nil,
       with_temperature: nil,
-      with_params: nil,
-      with_tool: nil,
-      ask: fake_response_message,
-      complete: fake_response_message
+      with_max_output_tokens: nil,
+      with_provider_options: nil,
+      with_caching: nil,
+      with_tools: nil,
+      generate: fake_response_message
     )
   end
 
@@ -58,8 +60,8 @@ RSpec.describe Raix::ChatCompletion, "default temperature handling" do
                   model: "anthropic/claude-opus-4-7",
                   messages: [{ role: "user", content: "hi" }])
 
-    expect(fake_chat).not_to have_received(:with_params) { |kwargs|
-      kwargs.key?(:temperature)
+    expect(fake_chat).not_to have_received(:with_provider_options) { |options|
+      options.key?(:temperature)
     }
   end
 
