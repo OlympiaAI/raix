@@ -353,7 +353,7 @@ RSpec.describe "MCP function name mapping" do
     end
   end
 
-  it "uses local_name with prefix in transcript instead of remote_name" do
+  it "declares the function under the prefixed local_name and proxies the call to the client" do
     client_key = "client_key"
     mock_tool = OpenStruct.new(
       name: "get_data",
@@ -380,17 +380,9 @@ RSpec.describe "MCP function name mapping" do
     result = instance.send(local_method_name, { id: "123" }, nil)
     expect(result).to eq(data_result)
 
-    expect(instance.transcript.size).to eq(1)
-    messages = instance.transcript[0]
-    expect(messages).to be_an(Array)
-    expect(messages.size).to eq(2)
-
-    assistant_msg = messages[0]
-    expect(assistant_msg[:role]).to eq("assistant")
-    expect(assistant_msg[:tool_calls][0][:function][:name]).to eq("get_data_#{client_key}")
-
-    tool_msg = messages[1]
-    expect(tool_msg[:role]).to eq("tool")
-    expect(tool_msg[:name]).to eq("get_data_#{client_key}")
+    # The declared function (what the model is offered) carries the prefixed
+    # name; the transcript record of the exchange is ChatCompletion's job.
+    expect(test_class.functions.last[:name]).to eq(local_method_name)
+    expect(instance.transcript).to be_empty
   end
 end

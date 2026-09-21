@@ -95,7 +95,7 @@ module Raix
         else
           __system_prompt = instance_exec(&current_prompt.system) if current_prompt.system.present? # rubocop:disable Lint/UnderscorePrefixedVariableName
           __system_prompt ||= system_prompt if respond_to?(:system_prompt)
-          __system_prompt ||= self.class.system_prompt.presence
+          __system_prompt ||= self.class.system_prompt.presence if self.class.respond_to?(:system_prompt)
           transcript << { system: __system_prompt } if __system_prompt
           transcript << { user: instance_exec(&current_prompt.text) } # text is required
 

@@ -78,24 +78,12 @@ RSpec.describe Raix::MCP do
       # Call the function with a simple query
       result = consumer.public_send(function_name, { query: "What is Raix?" }, nil)
 
-      # Verify we got a result and transcript was updated
+      # The proxied call returns the server's content. Recording the exchange
+      # in the transcript is ChatCompletion's job during a tool round, so a
+      # direct call leaves the transcript alone.
       expect(result).to be_a(String)
-      expect(result).not_to be_empty
-      # FunctionDispatch adds 2 messages: assistant message with tool_calls and tool result message
-      expect(consumer.transcript.size).to eq(transcript_size_before + 2)
-
-      # Verify the last two entries are the tool call and result
-      entries = consumer.transcript.flatten.last(2)
-      expect(entries.size).to eq(2)
-
-      assistant_msg, tool_msg = entries
-      expect(assistant_msg[:role]).to eq("assistant")
-      expect(function_name.to_s).to include(assistant_msg[:tool_calls].first.dig(:function, :name))
-
-      expect(tool_msg[:role]).to eq("tool")
-      expect(function_name.to_s).to include(tool_msg[:name])
-      expect(tool_msg[:content]).to be_a(String)
-      expect(tool_msg[:content]).to include("Raix consists")
+      expect(result).to include("Raix consists")
+      expect(consumer.transcript.size).to eq(transcript_size_before)
     end
   end
 end

@@ -34,7 +34,7 @@ RSpec.describe Raix::FunctionToolAdapter do
   describe ".create_tool_from_function" do
     it "forwards rich JSON-schema fields (additionalProperties, etc.) on object parameters" do
       tool = described_class.create_tool_from_function(instance_class.functions[0], instance_class.new)
-      schema = tool.params_schema
+      schema = tool.parameters_schema
 
       properties_param = schema["properties"]["properties"]
       expect(properties_param["type"]).to eq("object")
@@ -46,15 +46,22 @@ RSpec.describe Raix::FunctionToolAdapter do
 
     it "preserves strict OpenAI-style guards at the outer schema by default" do
       tool = described_class.create_tool_from_function(instance_class.functions[0], instance_class.new)
-      schema = tool.params_schema
+      schema = tool.parameters_schema
 
       expect(schema["additionalProperties"]).to eq(false)
       expect(schema["strict"]).to eq(true)
     end
 
-    it "skips schema generation for functions that declare no parameters" do
+    it "declares an empty object schema for functions with no parameters" do
       tool = described_class.create_tool_from_function(instance_class.functions[1], instance_class.new)
-      expect(tool.params_schema).to be_nil
+
+      expect(tool.parameters_schema).to eq(
+        "type" => "object",
+        "properties" => {},
+        "required" => [],
+        "additionalProperties" => false,
+        "strict" => true
+      )
     end
   end
 end

@@ -7,13 +7,11 @@
 # `tools/list`) and exposes each remote tool as if it were an inline
 # `function` declared with Raix::FunctionDispatch.  When the tool is
 # invoked by the model, the generated instance method forwards the
-# request to the remote server using `tools/call`, captures the result,
-# and appends the appropriate messages to the transcript so that the
-# conversation history stays consistent.
+# request to the remote server using `tools/call` and returns the result.
+# ChatCompletion records the exchange in the transcript during a tool round.
 
 require "active_support/concern"
 require "active_support/inflector"
-require "securerandom"
 require "uri"
 
 module Raix
@@ -124,36 +122,10 @@ module Raix
             stored_schema = self.class.instance_variable_get(:@tool_schemas)&.dig(local_name)
             coerced_arguments = coerce_arguments(arguments, stored_schema)
 
-            content_text = client.call_tool(remote_name, **coerced_arguments)
-            call_id = SecureRandom.uuid
-
-            # Mirror FunctionDispatch transcript behaviour
-            transcript << [
-              {
-                role: "assistant",
-                content: nil,
-                tool_calls: [
-                  {
-                    id: call_id,
-                    type: "function",
-                    function: {
-                      name: local_name.to_s,
-                      arguments: arguments.to_json
-                    }
-                  }
-                ]
-              },
-              {
-                role: "tool",
-                tool_call_id: call_id,
-                name: local_name.to_s,
-                content: content_text
-              }
-            ]
-
-            # Return the content - ChatCompletion will automatically continue
-            # the conversation after tool execution
-            content_text
+            # Return the content. ChatCompletion records the exchange in the
+            # transcript (the model's own tool-call turn plus this result) and
+            # continues the conversation.
+            client.call_tool(remote_name, **coerced_arguments)
           end
         end
 
